@@ -1,0 +1,19 @@
+[Unit]
+# Системная служба для бота KROOG.
+# Кладётся на сервере в /etc/systemd/system/kroog-bot.service
+Description=KROOG Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Папка с проектом на сервере
+WorkingDirectory=/root/kroog_bot
+# Запускаем именно питоном из venv проекта
+ExecStart=/root/kroog_bot/venv/bin/python /root/kroog_bot/main.py
+# Если бот упадёт — systemd перезапустит его через 5 секунд
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
