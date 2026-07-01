@@ -6,18 +6,30 @@
        → аудио → подтверждение → заявка
 """
 
+import os
+
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto, Message
 
 import calculator
 import database
-from config import ADMIN_ID
+from config import ADMIN_ID, TEMPLATES_URL
 from keyboards import back_to_menu, main_menu, order_colors, order_confirm, order_yes_no
 from texts import WELCOME
 
 router = Router()
+
+# Папка с фото цветов пластинок (кладём картинки сюда)
+PHOTOS_DIR = "photos"
+
+
+def templates_note() -> str:
+    """Приписка со ссылкой на макеты, если ссылка задана."""
+    if TEMPLATES_URL:
+        return f"\n\n📐 Скачать шаблоны макетов (конверт и яблоко): {TEMPLATES_URL}"
+    return ""
 
 
 class Order(StatesGroup):
@@ -25,9 +37,10 @@ class Order(StatesGroup):
     quantity = State()
     urgent = State()
     envelope = State()
-    envelope_design = State()  # ждём макет конверта
+    envelope_design = State()   # ждём макет конверта
     label = State()
-    label_design = State()     # ждём макет яблока
+    label_design_a = State()    # ждём макет яблока — сторона A
+    label_design_b = State()    # ждём макет яблока — сторона B
     audio = State()
     confirm = State()
 
@@ -78,6 +91,38 @@ async def start_order(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.message.edit_text(
         "🎨 <b>Шаг 1/6.</b> Выберите цвет пластинки:",
         reply_markup=order_colors(colors),
+    )
+    await callback.answer()
+
+
+@router.callback_query(Order.color, F.data == "order_colors_photo")
+async def show_color_photos(callback: CallbackQuery, state: FSMContext) -> None:
+    """Присылает альбом с фото всех цветов, затем снова кнопки выбора."""
+    photos = []
+    if os.path.isdir(PHOTOS_DIR):
+        for name in sorted(os.listdir(PHOTOS_DIR)):
+            if name.lower().endswith((".jpg", ".jpeg", ".png")):
+                photos.append(os.path.join(PHOTOS_DIR, name))
+    if not photos:
+        await callback.answer("Фото цветов скоро добавим 🙂", show_alert=True)
+        return
+
+    bot = callback.bot
+    chat_id = callback.message.chat.id
+    # Telegram разрешает до 10 фото в одном альбоме — шлём частями
+    for i in range(0, len(photos), 10):
+        chunk = photos[i:i + 10]
+        media = [
+            # Подпись под фото — имя файла без расширения (назови файлы по цвету)
+            InputMediaPhoto(media=FSInputFile(p), caption=os.path.splitext(os.path.basename(p))[0])
+            for p in chunk
+        ]
+        await bot.send_media_group(chat_id, media)
+
+    # Снова показываем кнопки выбора цвета — прямо под фото
+    colors = database.get_available_colors()
+    await bot.send_message(
+        chat_id, "🎨 Выберите цвет пластинки:", reply_markup=order_colors(colors)
     )
     await callback.answer()
 
@@ -166,7 +211,7 @@ async def envelope_yes(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(Order.envelope_design)
     await callback.message.edit_text(
         "📎 Пришлите макет конверта — файлом в формате <b>JPEG (300 dpi)</b> "
-        "или ссылкой на материалы."
+        "или ссылкой на материалы." + templates_note()
     )
     await callback.answer()
 
@@ -197,7 +242,8 @@ async def ask_label(target: Message, state: FSMContext) -> None:
     await state.set_state(Order.label)
     await target.answer(
         f"💿 <b>Шаг 5/6.</b> Добавить печать яблока (лейбла) с вашим дизайном?\n"
-        f"150 ₽ за сторону × 2 стороны = <b>{calculator.PRICE_LABEL} ₽ за штуку</b>",
+        f"<b>{calculator.PRICE_LABEL} ₽ за штуку.</b>\n"
+        f"Нужно прислать <b>2 макета</b>: отдельно для стороны A и стороны B.",
         reply_markup=order_yes_no("order_lbl"),
     )
 
@@ -205,31 +251,43 @@ async def ask_label(target: Message, state: FSMContext) -> None:
 @router.callback_query(Order.label, F.data == "order_lbl_yes")
 async def label_yes(callback: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(print_label=True)
-    await state.set_state(Order.label_design)
+    await state.set_state(Order.label_design_a)
     await callback.message.edit_text(
-        "📎 Пришлите макет яблока — файлом в формате <b>JPEG (300 dpi)</b> "
-        "или ссылкой на материалы."
+        "📎 Пришлите макет яблока для <b>стороны A</b> — "
+        "файлом <b>JPEG (300 dpi)</b> или ссылкой." + templates_note()
     )
     await callback.answer()
 
 
 @router.callback_query(Order.label, F.data == "order_lbl_no")
 async def label_no(callback: CallbackQuery, state: FSMContext) -> None:
-    await state.update_data(print_label=False, label_design=None)
+    await state.update_data(print_label=False, label_design_a=None, label_design_b=None)
     await ask_audio(callback.message, state)
     await callback.answer()
 
 
-@router.message(Order.label_design)
-async def receive_label_design(message: Message, state: FSMContext) -> None:
+@router.message(Order.label_design_a)
+async def receive_label_a(message: Message, state: FSMContext) -> None:
     material = extract_material(message)
     if material is None:
-        await message.answer(
-            "Не вижу макета. Пришлите изображение/файл яблока или ссылку (http…)."
-        )
+        await message.answer("Не вижу макета стороны A. Пришлите файл (JPEG) или ссылку.")
         return
     m_type, m_value, m_name = material
-    await state.update_data(label_design={"type": m_type, "value": m_value, "name": m_name})
+    await state.update_data(label_design_a={"type": m_type, "value": m_value, "name": m_name})
+    await state.set_state(Order.label_design_b)
+    await message.answer(
+        "📎 Теперь макет яблока для <b>стороны B</b> — файлом <b>JPEG (300 dpi)</b> или ссылкой."
+    )
+
+
+@router.message(Order.label_design_b)
+async def receive_label_b(message: Message, state: FSMContext) -> None:
+    material = extract_material(message)
+    if material is None:
+        await message.answer("Не вижу макета стороны B. Пришлите файл (JPEG) или ссылку.")
+        return
+    m_type, m_value, m_name = material
+    await state.update_data(label_design_b={"type": m_type, "value": m_value, "name": m_name})
     await ask_audio(message, state)
 
 
@@ -270,7 +328,7 @@ async def show_summary(message: Message, state: FSMContext) -> None:
     await state.update_data(total=price["total"])
 
     envelope = "да (макет приложен)" if data["print_envelope"] else "нет"
-    label = "да (макет приложен)" if data["print_label"] else "нет"
+    label = "да (2 макета приложены)" if data["print_label"] else "нет"
     urgent = (
         f"да (+{calculator.URGENT_SURCHARGE_PERCENT}%)" if data["urgent"]
         else "нет (1–2 недели)"
@@ -355,9 +413,12 @@ async def send_application_to_admin(callback: CallbackQuery, data: dict) -> None
     if data.get("envelope_design"):
         d = data["envelope_design"]
         await send_material(bot, ADMIN_ID, d["type"], d["value"], "🖼 Макет конверта")
-    if data.get("label_design"):
-        d = data["label_design"]
-        await send_material(bot, ADMIN_ID, d["type"], d["value"], "💿 Макет яблока")
+    if data.get("label_design_a"):
+        d = data["label_design_a"]
+        await send_material(bot, ADMIN_ID, d["type"], d["value"], "💿 Макет яблока — сторона A")
+    if data.get("label_design_b"):
+        d = data["label_design_b"]
+        await send_material(bot, ADMIN_ID, d["type"], d["value"], "💿 Макет яблока — сторона B")
     a = data["audio"]
     await send_material(bot, ADMIN_ID, a["type"], a["value"], "🎧 Аудио клиента")
 

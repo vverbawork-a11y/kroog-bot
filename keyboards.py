@@ -45,6 +45,8 @@ def back_to_menu() -> InlineKeyboardMarkup:
 def order_colors(colors) -> InlineKeyboardMarkup:
     """Кнопки выбора цвета — строятся из тех цветов, что есть на складе."""
     builder = InlineKeyboardBuilder()
+    # Первой — кнопка с фото всех цветов, чтобы выбирать не вслепую
+    builder.button(text="📸 Фото цветов", callback_data="order_colors_photo")
     for color in colors:
         emoji = color["emoji"] + " " if color["emoji"] else ""
         builder.button(
