@@ -14,7 +14,7 @@ def main_menu() -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
     # Каждая кнопка: текст для человека + callback_data (скрытая метка для бота)
     builder.button(text="🎶 Заказать пластинку", callback_data="menu_order")
-    builder.button(text="ℹ️ О компании", callback_data="menu_about")
+    builder.button(text="ℹ️ О нас", callback_data="menu_about")
     builder.button(text="🛠 Техрекомендации", callback_data="menu_tech")
     # Связь с менеджером (перед Instagram):
     # если задан username — ведём прямо в чат менеджера;
