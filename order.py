@@ -15,7 +15,7 @@ from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto, Message
 
 import calculator
 import database
-from config import ADMIN_ID, TEMPLATES_URL
+from config import ADMIN_ID
 from keyboards import back_to_menu, main_menu, order_colors, order_confirm, order_yes_no
 from texts import WELCOME
 
@@ -23,13 +23,33 @@ router = Router()
 
 # Папка с фото цветов пластинок (кладём картинки сюда)
 PHOTOS_DIR = "photos"
+# Папка с файлами-шаблонами макетов: templates/envelope и templates/label
+TEMPLATES_DIR = "templates"
 
 
-def templates_note() -> str:
-    """Приписка со ссылкой на макеты, если ссылка задана."""
-    if TEMPLATES_URL:
-        return f"\n\n📐 Скачать шаблоны макетов (конверт и яблоко): {TEMPLATES_URL}"
-    return ""
+async def send_templates(bot, chat_id: int, kind: str) -> None:
+    """
+    Присылает клиенту файлы-шаблоны макета (PDF/EPS и т.п.).
+    kind: "envelope" (конверт) или "label" (яблоко).
+    """
+    folder = os.path.join(TEMPLATES_DIR, kind)
+    if not os.path.isdir(folder):
+        return
+    files = [
+        os.path.join(folder, n)
+        for n in sorted(os.listdir(folder))
+        if n.lower().endswith((".pdf", ".eps", ".ai", ".zip", ".svg"))
+    ]
+    if not files:
+        return
+    name = "конверта" if kind == "envelope" else "яблока"
+    await bot.send_message(
+        chat_id,
+        f"📐 Шаблон {name}. Скачайте, отредактируйте в своём редакторе "
+        f"(Illustrator, CorelDRAW, Inkscape и т.п.) и пришлите готовый макет:",
+    )
+    for path in files:
+        await bot.send_document(chat_id, FSInputFile(path))
 
 
 class Order(StatesGroup):
@@ -210,9 +230,10 @@ async def envelope_yes(callback: CallbackQuery, state: FSMContext) -> None:
     await state.update_data(print_envelope=True)
     await state.set_state(Order.envelope_design)
     await callback.message.edit_text(
-        "📎 Пришлите макет конверта — файлом в формате <b>JPEG (300 dpi)</b> "
-        "или ссылкой на материалы." + templates_note()
+        "📎 Пришлите готовый макет конверта — файлом <b>JPEG (300 dpi)</b> или ссылкой.\n"
+        "Шаблон для редактирования — ниже 👇"
     )
+    await send_templates(callback.bot, callback.message.chat.id, "envelope")
     await callback.answer()
 
 
@@ -242,7 +263,7 @@ async def ask_label(target: Message, state: FSMContext) -> None:
     await state.set_state(Order.label)
     await target.answer(
         f"💿 <b>Шаг 5/6.</b> Добавить печать яблока (лейбла) с вашим дизайном?\n"
-        f"<b>{calculator.PRICE_LABEL} ₽ за штуку.</b>\n"
+        f"<b>Цена: {calculator.PRICE_LABEL} ₽.</b>\n"
         f"Нужно прислать <b>2 макета</b>: отдельно для стороны A и стороны B.",
         reply_markup=order_yes_no("order_lbl"),
     )
@@ -254,8 +275,10 @@ async def label_yes(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(Order.label_design_a)
     await callback.message.edit_text(
         "📎 Пришлите макет яблока для <b>стороны A</b> — "
-        "файлом <b>JPEG (300 dpi)</b> или ссылкой." + templates_note()
+        "файлом <b>JPEG (300 dpi)</b> или ссылкой.\n"
+        "Шаблон для редактирования — ниже 👇"
     )
+    await send_templates(callback.bot, callback.message.chat.id, "label")
     await callback.answer()
 
 
