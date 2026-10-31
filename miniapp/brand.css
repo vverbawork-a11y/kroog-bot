@@ -1,0 +1,14 @@
+/* Source: designer's Figma, file ITyFCLKHT6B66RCT3NslD8,
+   typography 1:16; palette 1:7002. No substitute typeface selected.
+   Production webfont files must be supplied before visual sign-off. */
+:root {
+  --kroog-burgundy: #4a1513;
+  --kroog-orange: #fc3e09;
+  --kroog-lilac: #dad3ff;
+  --kroog-cream: #fcfaf5;
+  --kroog-text: var(--kroog-burgundy);
+  --kroog-background: var(--kroog-cream);
+  --kroog-font: "ABC Monument Grotesk Cyrillic";
+  --kroog-weight-body: 400;
+  --kroog-weight-heading: 500;
+}
