@@ -21,7 +21,7 @@ import database
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-08-11"
+RELEASE = "2026-11-08-12"
 
 
 def setup():
@@ -79,6 +79,10 @@ async def catalog(request):
     products = []
     for row in rows:
         name = row["name"]
+        # Legacy duplicate of Ночной переливающийся. Preserve the existing DB
+        # entry for historical order ids, but never list it as a product.
+        if name == "Русалка":
+            continue
         standard = name in colours.BY_NAME
         # Older colours stay available if present, but unknown old zero-stock
         # placeholder entries do not clutter the supplier catalogue.
@@ -308,7 +312,7 @@ async def notify_orders(bot):
         for order in orders:
             o = json.loads(order["details"])
             ref = order["id"]
-            options = ", ".join(title for k,title in (("sleeve","конверт"),("label","яблоко"),("rush","ускорение")) if o[k]) or "без доплат"
+            options = ", ".join(title for k,title in (("sleeve","конверт"),("label","яблоко"),("rush","вне очереди")) if o[k]) or "без доплат"
             message = (f"Заказ №{ref}\n{o['color']} × {o['quantity']}\n{options}\n"
                        f"Итого {o['total']} ₽\n{o['name']} · {o['contact']}")
             message += f"\nМакеты прикреплены: {len(o.get('files', {}))}" if o["sleeve"] or o["label"] else ""
