@@ -5,14 +5,14 @@ const money = n => n.toLocaleString("ru-RU") + " ₽";
 const panels = ["shop","inventory","about","receipt","inquiry","works"];
 let catalog, color, requestId, busy = false, choosing = true;
 let interestColor = null, interestRequestId = null;
-function syncVideos() {
-  const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  for (const video of document.querySelectorAll(".brand-motion")) {
-    const pane=video.closest("section");
-    if (reduced || !pane || pane.hidden) { video.pause(); continue; }
-    if (!video.getAttribute("src")) {video.src=video.dataset.src;video.load();}
-    video.play().catch(()=>{}); // Animated poster remains visible if autoplay is blocked.
-  }
+function startBackground() {
+  const video = $("ambientBg");
+  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const saveData = navigator.connection?.saveData;
+  // Always show the high-resolution still. Only stream motion when appropriate.
+  if (!video || reduce || saveData) return;
+  video.src = video.dataset.src;
+  video.play().catch(()=>{});
 }
 function display(panel) {
   for (const name of panels) $(name).hidden = name !== panel;
@@ -21,7 +21,6 @@ function display(panel) {
   }
   $("status").textContent = "";
   window.scrollTo(0,0);
-  syncVideos();
 }
 async function api(path,data) {
   const isForm = data instanceof FormData;
@@ -51,15 +50,26 @@ function prices() {
   $("discount").textContent = pct ? "Скидка за тираж "+pct+"% · −"+money(discount):"";
 }
 function choose(c, fromClick=false) {
-  if (fromClick) {choosing=false;requestId=null;window.scrollTo(0,0);}
+  if (fromClick) {choosing=false;requestId=null;}
   $("selectedName").textContent=c.name+" · доступно к заказу "+c.stock+" шт.";
-  $("colors").hidden=!choosing;$("colorHeading").hidden=!choosing;
+  $("colors").hidden=!choosing;
+  $("colorHeading").hidden=!choosing;
+  $("stockHint").hidden=!choosing;
+  $("incomingSection").hidden=!choosing || !(catalog?.colors.some(x=>x.stock===0 && x.incoming));
+  $("unavailableSection").hidden=!choosing || !(catalog?.colors.some(x=>x.stock===0 && !x.incoming));
   color = c;
   for (const b of $("colors").children) b.setAttribute("aria-pressed",String(Number(b.dataset.id)===c.id));
   $("qty").max = c.stock;
   $("qty").value = Math.min(c.stock,Math.max(1,Number($("qty").value)));
   $("form").hidden = choosing;
   prices();
+  if (fromClick) {
+    requestAnimationFrame(()=>{
+      // Form replaces the catalogue at the same scroll position, not below it.
+      const top = window.scrollY + $("form").getBoundingClientRect().top - 12;
+      window.scrollTo(0,Math.max(0,top));
+    });
+  }
 }
 async function load() {
   catalog = await api("catalog");
@@ -83,13 +93,15 @@ async function load() {
     tile.dataset.id=c.id;
     let pic;
     if (Number.isInteger(c.atlas) && c.atlas>=0 && c.atlas<32) {
-      pic=document.createElement("span");
-      pic.className="atlas-photo";
-      pic.setAttribute("role","img");
-      pic.setAttribute("aria-label","Виниловая пластинка: "+c.name);
-      pic.style.backgroundImage="url('/assets/colours-atlas.webp')";
-      pic.style.backgroundSize="400% 800%";
-      pic.style.backgroundPosition=(c.atlas%4/3*100)+"% "+(Math.floor(c.atlas/4)/7*100)+"%";
+      pic=document.createElement("img");
+      // Original JPG bytes supplied by the vendor: no low-res atlas, resampling
+      // or background-position cropping.
+      pic.src="/assets/supplier/"+String(c.atlas).padStart(2,"0")+".jpg";
+      pic.alt=c.name;
+      pic.loading="lazy";
+      pic.decoding="async";
+      pic.width=800;
+      pic.height=800;
     } else if (c.photo) {
       pic=document.createElement("img");
       pic.src=c.photo;pic.alt=c.name;pic.loading="lazy";
@@ -121,7 +133,10 @@ async function load() {
   for (const c of available) $("colors").append(makeTile(c,true));
   for (const c of incoming) $("incomingColors").append(makeTile(c,false));
   for (const c of unavailable) $("unavailableColors").append(makeTile(c,false));
-  if (available.length) choose(available.find(c=>c.id===color?.id)||available[0]);
+  if (available.length) {
+    const existing=available.find(c=>c.id===color?.id)||available[0];
+    choose(existing);
+  }
   else {
     color=null;choosing=true;
     $("colors").hidden=false;$("colorHeading").hidden=false;$("form").hidden=true;
@@ -284,7 +299,7 @@ $("stockNav").onclick=async()=>{display("inventory");try{await load();}catch(e){
 async function start(){
   tg?.ready();tg?.expand();display("shop");
   if (!tg?.initData) {$("status").textContent="Открой приложение из меню @kroog_vinyl_bot.";return;}
-  try {await load();const id=new URLSearchParams(location.search).get("order");if(id && catalog.admin && /^\d+$/.test(id))await detail(id);}
+  try {await load();startBackground();const id=new URLSearchParams(location.search).get("order");if(id && catalog.admin && /^\d+$/.test(id))await detail(id);}
   catch(e){$("status").textContent=e.message;}
 }
 start();
