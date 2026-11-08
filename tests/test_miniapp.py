@@ -176,5 +176,68 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(details["total"], 3900)
 
 
+    async def test_current_physical_stock_and_incoming_colours(self):
+        available={"Красный марбл": 10, "Прозрачный": 10,
+                   "Голубой марбл": 10}
+        incoming={
+            "Синий прозрачный", "Оранжевый прозрачный",
+            "Зелёный марбл", "Розовый «Барби»",
+            "Фиолетовый марбл", "Ночной переливающийся",
+            "Жёлтый прозрачный", "Красный прозрачный", "Древесный",
+        }
+        with database.get_connection() as db:
+            rows=db.execute("SELECT name,stock,incoming FROM colors").fetchall()
+        stock={r["name"]: r["stock"] for r in rows}
+        flags={r["name"] for r in rows if r["incoming"]}
+        for name, count in available.items():
+            self.assertEqual(stock[name], count)
+        self.assertEqual(stock["Чёрный"], 5)  # test setup changes the confirmed 10 to 5
+        self.assertEqual(flags, incoming)
+        for r in rows:
+            if r["name"] not in available and r["name"] != "Чёрный":
+                self.assertEqual(r["stock"], 0)
+
+    async def test_restart_does_not_reset_revised_stock(self):
+        with database.get_connection() as db, db:
+            row=db.execute("SELECT id FROM colors WHERE name=?", ("Красный марбл",)).fetchone()
+        database.set_stock(row["id"], 7)
+        database.init_db()
+        self.assertEqual(database.get_color(row["id"])["stock"], 7)
+
+    async def test_incoming_is_not_orderable_and_is_first_out_of_stock(self):
+        resp=await self.client.get("/api/catalog",headers=self.headers(43))
+        self.assertEqual(resp.status,200)
+        colors=(await resp.json())["colors"]
+        upcoming=[r for r in colors if r["incoming"]]
+        self.assertEqual(len(upcoming),9)
+        self.assertTrue(all(r["stock"]==0 for r in upcoming))
+        seen_unavailable=False
+        for c in colors:
+            if c["stock"]==0 and not c["incoming"]:
+                seen_unavailable=True
+            elif c["incoming"]:
+                self.assertFalse(seen_unavailable)
+        response=await self.submit(dict(self.params(),color=upcoming[0]["id"]),files=False)
+        self.assertEqual(response.status,409)
+
+    async def test_admin_can_mark_incoming_and_receive_stock(self):
+        with database.get_connection() as db:
+            row=db.execute("SELECT id,stock,incoming FROM colors WHERE name=?", ("Жёлтый",)).fetchone()
+        self.assertEqual(row["stock"],0)
+        resp=await self.client.post("/api/stock",json={
+            "color":row["id"],"stock":0,"previous":0,
+            "incoming":True,"previous_incoming":False,
+        },headers=self.headers(42))
+        self.assertEqual(resp.status,200,await resp.text())
+        self.assertEqual(database.get_color(row["id"])["incoming"],1)
+        resp=await self.client.post("/api/stock",json={
+            "color":row["id"],"stock":10,"previous":0,
+            "incoming":True,"previous_incoming":True,
+        },headers=self.headers(42))
+        self.assertEqual(resp.status,200,await resp.text())
+        self.assertEqual(database.get_color(row["id"])["stock"],10)
+        self.assertEqual(database.get_color(row["id"])["incoming"],0)
+
+
 if __name__ == "__main__":
     unittest.main()
