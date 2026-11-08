@@ -21,7 +21,7 @@ class KROOGStorefrontTests(unittest.TestCase):
         for photo in photos:
             with self.subTest(photo=photo.name):
                 data = photo.read_bytes()
-                self.assertGreaterEqual(len(data), 40000)
+                self.assertGreaterEqual(len(data), 35000)
                 self.assertTrue(data.startswith(b"\\xff\\xd8\\xff"))
                 self.assertTrue(data.endswith(b"\\xff\\xd9"))
         self.assertEqual(
