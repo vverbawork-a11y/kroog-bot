@@ -111,5 +111,70 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(database.get_color(1)["stock"], 5)
 
 
+    async def test_supplier_colours_visible_and_stock_preserved(self):
+        # Existing stock is never reset during catalogue migrations.
+        database.init_db()
+        self.assertEqual(database.get_color(1)["stock"], 5)
+        response = await self.client.get("/api/catalog", headers=self.headers(43))
+        self.assertEqual(response.status, 200)
+        public = await response.json()
+        self.assertFalse(public["admin"])
+        by_name = {p["name"]: p for p in public["colors"]}
+        self.assertGreaterEqual(len(by_name), 32)
+        self.assertEqual(by_name["Оранжевый прозрачный"]["atlas"], 24)
+        self.assertEqual(by_name["Прозрачный"]["price"], 3900)
+        self.assertEqual(by_name["Ночной переливающийся"]["price"], 6500)
+        self.assertEqual(by_name["Чёрный"]["stock"], 5)
+        self.assertEqual(by_name["Оранжевый прозрачный"]["stock"], 0)
+
+    async def test_out_of_stock_inquiry_persists_and_is_idempotent(self):
+        response = await self.client.get("/api/catalog", headers=self.headers(43))
+        catalog = await response.json()
+        orange = next(p for p in catalog["colors"]
+                      if p["name"] == "Оранжевый прозрачный")
+        self.assertEqual(orange["stock"], 0)
+        request = {
+            "color": orange["id"], "contact": "@client",
+            "request_id": str(uuid.uuid4())
+        }
+        first = await self.client.post(
+            "/api/inquiries", json=request, headers=self.headers(43))
+        self.assertEqual(first.status, 201, await first.text())
+        inquiry_id = (await first.json())["id"]
+        second = await self.client.post(
+            "/api/inquiries", json=request, headers=self.headers(43))
+        self.assertEqual(second.status, 200, await second.text())
+        self.assertEqual((await second.json())["id"], inquiry_id)
+        with database.get_connection() as db:
+            count = db.execute(
+                "SELECT COUNT(*) FROM shop_inquiries WHERE id=?", (inquiry_id,)
+            ).fetchone()[0]
+        self.assertEqual(count, 1)
+        self.assertEqual(database.get_color(orange["id"])["stock"], 0)
+
+    async def test_inquiry_rejects_available_colour(self):
+        request = {"color": 1, "contact": "@client", "request_id": str(uuid.uuid4())}
+        response = await self.client.post(
+            "/api/inquiries", json=request, headers=self.headers(43))
+        self.assertEqual(response.status, 409)
+
+    async def test_checkout_uses_per_colour_price(self):
+        with database.get_connection() as db, db:
+            row = db.execute("SELECT id FROM colors WHERE name=?", ("Прозрачный",)).fetchone()
+        self.assertIsNotNone(row)
+        database.set_stock(row["id"], 2)
+        params = self.params()
+        params.update(color=row["id"], quantity=1, sleeve=False, label=False)
+        response = await self.submit(params, files=False)
+        self.assertEqual(response.status, 201, await response.text())
+        order_id = (await response.json())["id"]
+        with database.get_connection() as db:
+            details = json.loads(db.execute(
+                "SELECT details FROM shop_orders WHERE id=?", (order_id,)
+            ).fetchone()["details"])
+        self.assertEqual(details["unit_price"], 3900)
+        self.assertEqual(details["total"], 3900)
+
+
 if __name__ == "__main__":
     unittest.main()
