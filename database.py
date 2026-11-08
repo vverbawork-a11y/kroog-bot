@@ -77,7 +77,13 @@ def init_db() -> None:
         conn.executemany(
             "INSERT INTO colors (name, stock, is_black, description, emoji) "
             "VALUES (?, ?, ?, ?, ?)",
-            START_COLORS,
+            [(name, 0, black, desc, emoji) for name, _, black, desc, emoji in START_COLORS],
+        )
+    # Additional blanks with photos are available in the manager's inventory.
+    for name in ("Бирюзовый", "Голубой", "Жёлтый", "Зелёный прозрачный"):
+        conn.execute(
+            "INSERT INTO colors(name, stock, is_black) SELECT ?, 0, 0 "
+            "WHERE NOT EXISTS(SELECT 1 FROM colors WHERE name=?)", (name, name)
         )
     conn.commit()
     conn.close()
@@ -107,15 +113,16 @@ def get_color(color_id: int) -> sqlite3.Row | None:
     return row
 
 
-def decrease_stock(color_id: int, quantity: int) -> None:
+def decrease_stock(color_id: int, quantity: int) -> bool:
     """Уменьшить остаток после оформленного заказа."""
     conn = get_connection()
-    conn.execute(
-        "UPDATE colors SET stock = stock - ? WHERE id = ?",
-        (quantity, color_id),
+    changed = conn.execute(
+        "UPDATE colors SET stock = stock - ? WHERE id = ? AND stock >= ?",
+        (quantity, color_id, quantity),
     )
     conn.commit()
     conn.close()
+    return changed.rowcount == 1
 
 
 def add_stock(color_id: int, quantity: int) -> None:

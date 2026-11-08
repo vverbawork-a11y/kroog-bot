@@ -6,6 +6,11 @@ KROOG bot — точка входа.
 
 import asyncio
 import logging
+import os
+from contextlib import suppress
+from aiohttp import web
+from aiogram.types import MenuButtonWebApp, WebAppInfo
+import shop
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -17,7 +22,7 @@ import admin
 import database
 import order
 import texts
-from config import BOT_TOKEN
+from config import BOT_TOKEN, MINIAPP_URL
 from keyboards import back_to_menu, main_menu
 
 logging.basicConfig(level=logging.INFO)
@@ -93,8 +98,27 @@ async def main() -> None:
         # Чтобы <b>жирный</b> и <i>курсив</i> в текстах работали автоматически
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    await setup_bot_profile(bot)
-    await dp.start_polling(bot)
+    runner = None
+    notifier = None
+    try:
+        if MINIAPP_URL:
+            shop.setup()
+            runner = web.AppRunner(shop.application())
+            await runner.setup()
+            await web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", "3000"))).start()
+            await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(
+                text="Заказать", web_app=WebAppInfo(url=MINIAPP_URL)))
+            notifier = asyncio.create_task(shop.notify_orders(bot))
+        await setup_bot_profile(bot)
+        await dp.start_polling(bot, close_bot_session=False)
+    finally:
+        if notifier:
+            notifier.cancel()
+            with suppress(asyncio.CancelledError):
+                await notifier
+        if runner:
+            await runner.cleanup()
+        await bot.session.close()
 
 
 if __name__ == "__main__":
