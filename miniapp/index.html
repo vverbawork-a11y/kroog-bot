@@ -10,15 +10,37 @@
 <body>
 <header><img src="/assets/kroog-logo.svg" width="88" alt="Круг"><nav><button id="shopNav">Заказ</button><button id="aboutNav">О нас</button><button id="stockNav" hidden>Склад</button></nav></header>
 <main>
-<section id="shop"><h1>Твоя пластинка</h1><div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><div id="colors" class="grid"></div>
+<section id="shop"><h1>Твоя пластинка</h1><div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><p class="help" id="stockHint">Остаток — сколько пластинок этого цвета доступно для заказа сейчас. Указана цена за пластинку без печати.</p><div id="colors" class="grid"></div>
 <form id="form" hidden><button type="button" id="changeColor">← Выбрать другой цвет</button><h2 id="selectedName"></h2><div class="line"><label for="qty">Количество</label><div class="counter"><button type="button" id="minus" aria-label="Меньше">−</button><input id="qty" type="number" min="1" step="1" value="1" required><button type="button" id="plus" aria-label="Больше">+</button></div></div>
 <label class="line"><span>Цветная печать конверта<small id="sleevePrice"></small></span><input type="checkbox" id="sleeve"></label>
+<div class="artwork-group" id="sleeveFiles" hidden>
+<a class="template-link" href="/templates/envelope/Макет_конверт.pdf" target="_blank" rel="noopener">Скачать макет конверта · PDF ↗</a>
+<p class="help">Прикрепи изображения для печати сейчас или отправь менеджеру позже.</p>
+<div class="upload-grid">
+<label class="upload-option">Передняя сторона
+<input type="file" id="sleeve_front" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
+<span class="file-cta">Прикрепить файл</span><small id="sleeve_front_name">Не выбран</small></label>
+<label class="upload-option">Задняя сторона
+<input type="file" id="sleeve_back" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
+<span class="file-cta">Прикрепить файл</span><small id="sleeve_back_name">Не выбран</small></label>
+</div></div>
 <label class="line"><span>Цветное яблоко<small id="labelPrice"></small></span><input type="checkbox" id="label"></label>
+<div class="artwork-group" id="labelFiles" hidden>
+<a class="template-link" href="/templates/label/Макет_яблоко.pdf" target="_blank" rel="noopener">Скачать макет яблока · PDF ↗</a>
+<p class="help">Для каждой стороны пластинки можно прикрепить отдельный макет.</p>
+<div class="upload-grid">
+<label class="upload-option">Сторона A
+<input type="file" id="label_a" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
+<span class="file-cta">Прикрепить файл</span><small id="label_a_name">Не выбран</small></label>
+<label class="upload-option">Сторона B
+<input type="file" id="label_b" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
+<span class="file-cta">Прикрепить файл</span><small id="label_b_name">Не выбран</small></label>
+</div></div>
 <label class="line"><span>Ускоренная нарезка<small id="rushPrice"></small></span><input type="checkbox" id="rush"></label>
 <label class="contact">Как с тобой связаться?<input id="contact" required minlength="2" maxlength="120" placeholder="@username или телефон"></label>
-<div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div><button class="action" id="submit">Отправить заказ</button><small>Менеджер напишет для передачи аудио, макетов и оплаты.</small></form></section>
-<section id="about" hidden><h1>О нас</h1><p>«Круг» — мастерская виниловых изданий. Каждую пластинку мы нарезаем по одной, с твоей музыкой. Можно напечатать свой конверт и яблоко для обеих сторон.</p><p>Обычный срок — около 1–2 недель. Точную дату подтвердит менеджер.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF ↗</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Яблоко · PDF ↗</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram ↗</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram ↗</a></div></section>
+<div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div><button class="action" id="submit">Отправить заказ</button><small>Макеты: JPG, PNG, PDF, TIFF, PSD или AI · до 20 МБ каждый. Менеджер свяжется с тобой для передачи аудио, недостающих макетов и оплаты.</small></form></section>
+<section id="about" hidden><h1>О нас</h1><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b> Мы нарезаем твою музыку на винил и собираем каждый экземпляр отдельно — от звуковой дорожки до оформления и упаковки.</p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Ты выбираешь цвет винила, конверт и оформление яблок, а мы помогаем подготовить материалы к производству.</p><p>Ориентировочный срок — 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF ↗</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Яблоко · PDF ↗</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram ↗</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram ↗</a></div></section>
 <section id="inventory" hidden><h1>Склад</h1><p>Укажи фактический остаток. Цвет с нулём исчезнет из заказа.</p><div id="stocks"></div></section>
-<section id="receipt" hidden><h1 id="receiptTitle"></h1><p id="receiptText"></p><button id="back" class="action">Вернуться к цветам</button><button id="cancelOrder" hidden>Отменить и вернуть на склад</button></section>
+<section id="receipt" hidden><h1 id="receiptTitle"></h1><p id="receiptText"></p><div id="receiptFiles"></div><button id="back" class="action">Вернуться к цветам</button><button id="cancelOrder" hidden>Отменить и вернуть на склад</button></section>
 <p role="status" aria-live="polite" id="status">Загружаем цвета…</p>
 </main></body></html>
