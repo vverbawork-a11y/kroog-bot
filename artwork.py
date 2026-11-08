@@ -34,6 +34,20 @@ async def receive(request):
 
     A JSON-only order remains supported for older clients.
     """
+    # Browsers encode FormData with only a text field as urlencoded rather
+    # than multipart. Orders without uploaded artwork must also work.
+    if request.content_type == "application/x-www-form-urlencoded":
+        try:
+            form = await request.post()
+            if len(form) != 1 or "payload" not in form:
+                raise ValueError
+            data = json.loads(form["payload"])
+            if not isinstance(data, dict):
+                raise ValueError
+            return data, {}, None
+        except (ValueError, TypeError, KeyError):
+            raise web.HTTPBadRequest(text="Некорректная заявка.")
+
     if request.content_type != "multipart/form-data":
         try:
             data = await request.json()
