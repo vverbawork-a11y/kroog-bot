@@ -251,33 +251,23 @@ body[data-panel="inquiry"] #ambientBg,body[data-panel="receipt"] #ambientBg{opac
   font-size:clamp(24px,5.6vw,32px);line-height:1.18}
 #works::before,#works::after{display:none!important}
 
-/* Consistent original supplier disc framing. Replacing the problematic <img>
-   rendered surface with a direct background prevents iOS WebKit image layout
-   seams; alt text remains in the visually-hidden <img> for screen readers. */
-#colors .tile-media.has-vinyl-photo{
-  background-color:#f5f2f0!important;
-  background-repeat:no-repeat!important;
-  /* Use 115% instead of 136%: keep the complete disc inside the frame
-     on desktop and mobile while preserving the original high-res JPEG. */
-  background-size:115% 115%!important;
-  background-position:50% 50%!important;
+/* Every preview has a centered disc with the same 10% clear margin.
+   Do not crop, zoom or vertically offset images in CSS: this applies on
+   both the desktop and Telegram iOS/Android WebViews. */
+#colors .tile-media {
+  position:relative;display:block;width:100%;height:auto;aspect-ratio:1/1;
+  margin:0;padding:0;overflow:hidden;line-height:0;
+  background:#f8f7f5;isolation:isolate;
 }
-#colors .tile-media.has-vinyl-photo .vinyl-photo{
-  position:absolute!important;width:1px!important;height:1px!important;
-  padding:0!important;margin:0!important;border:0!important;
-  clip-path:inset(50%)!important;overflow:hidden!important;
+#colors .tile-media.has-vinyl-photo {
+  background:#f8f7f5!important;
+  background-image:none!important;
 }
-/* Supplier frames where the photo sits low: move the IMAGE up, never
-   the card or caption. Original disc stays entirely within the square. */
-#colors .tile-media.has-vinyl-photo[data-atlas="7"],
-#colors .tile-media.has-vinyl-photo[data-atlas="8"],
-#colors .tile-media.has-vinyl-photo[data-atlas="10"],
-#colors .tile-media.has-vinyl-photo[data-atlas="21"],
-#colors .tile-media.has-vinyl-photo[data-atlas="22"],
-#colors .tile-media.has-vinyl-photo[data-atlas="24"] {
-  background-position:50% 85%!important;
-}
-/* Blue clear has a different margin in its original supplier photo. */
-#colors .tile-media.has-vinyl-photo[data-atlas="29"] {
-  background-position:50% 69%!important;
+#colors .tile-media.has-vinyl-photo .vinyl-photo {
+  position:absolute!important;inset:0!important;
+  display:block!important;width:100%!important;height:100%!important;
+  max-width:none!important;max-height:none!important;aspect-ratio:auto!important;
+  object-fit:fill!important;object-position:50% 50%!important;
+  background:transparent!important;transform:none!important;clip-path:none!important;
+  margin:0!important;padding:0!important;border:0!important;
 }
