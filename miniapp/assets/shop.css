@@ -22,48 +22,55 @@
 #submit{font-weight:500}
 
 
-/* Official KROOG assets: Figma mascot, supplied videos and Figma palette. */
-header,main{position:relative}
+
+/* Clean storefront: authentic white-violet motion, and full-resolution photos. */
+body{isolation:isolate;position:relative;min-height:100vh}
+#ambientBg{
+  position:fixed;inset:0;width:100vw;height:100vh;z-index:0;
+  object-fit:cover;object-position:center center;
+  pointer-events:none;opacity:.43;
+  background:transparent;
+}
+header,main{position:relative;z-index:1}
+header{background:#fcfaf5d9;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 nav{display:flex;align-items:center;gap:2px}
 nav button{font-size:14px;padding:10px 7px}
-.brand-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(115px,36%);align-items:center;gap:7px;min-height:200px;margin:0 0 20px}
-.brand-hero-copy h1{margin:12px 0}
-.brand-hero-art{position:relative;max-width:215px;justify-self:end;width:100%}
-.brand-motion{display:block;width:100%;height:auto;aspect-ratio:3000/4244;object-fit:cover;border-radius:16px;background:#fcfaf5}
-.brand-mascot{position:absolute;width:41%;right:-5%;bottom:-8%;filter:drop-shadow(0 2px 3px #4a151324)}
-.about-banner{display:grid;grid-template-columns:1fr 125px;position:relative;align-items:center;min-height:165px;gap:12px;margin-bottom:26px}
-.about-banner h1{margin:0}
-.about-motion{max-height:182px}
-.about-mascot{position:absolute;width:70px;right:80px;bottom:-10px}
-.works-mascot{display:block;width:140px;max-width:70%;margin:0 auto 12px}
-.works-placeholder{border:1px solid #4a151336;border-radius:18px;background:#dad3ff;padding:28px 20px;margin:22px 0;text-align:center}
-.works-placeholder h2{margin:14px 0 8px}
-.works-placeholder p{opacity:.85}
-.tile-media{position:relative;display:block;overflow:hidden;background:#fff}
-.atlas-photo{display:block;width:100%;aspect-ratio:1;background-repeat:no-repeat;background-position:center;background-color:#fff}
-.tile img,.stock-empty{aspect-ratio:1}
+#shop{min-width:0}
+.tile-media{position:relative;display:block;width:100%;aspect-ratio:1;overflow:hidden;background:#fff}
+.tile-media img{
+  display:block;width:100%;height:100%;aspect-ratio:1;
+  object-fit:contain;object-position:center center;
+  background:#fff;filter:none;
+}
+.tile-media .stock-empty{width:100%;height:100%;aspect-ratio:1}
 .tile-unavailable,.tile-incoming{background:#fcfaf5;border:1px solid #4a151326}
-.tile-unavailable .atlas-photo,.tile-unavailable img{filter:brightness(.65) saturate(.85)}
-.tile-incoming .atlas-photo,.tile-incoming img{filter:brightness(.86) saturate(.9)}
-.tile-unavailable .tile-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,#4a15137a)}
-.tile-incoming .tile-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 50%,#4a15136c)}
-.stock-overlay{position:absolute;bottom:10px;left:10px;right:10px;z-index:2;color:white;font-size:14px;font-weight:500}
+.tile-unavailable .tile-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 58%,#4a151366)}
+.tile-incoming .tile-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 58%,#4a151366)}
+.stock-overlay{
+  position:absolute;bottom:10px;left:10px;right:10px;z-index:2;
+  color:white;font-size:14px;font-weight:500;
+  text-shadow:0 1px 3px #4a151377;
+}
 .unavailable-section{margin-top:32px;padding-top:24px;border-top:1px solid #4a151333}
 .unavailable-section h2{margin:0}
 .unavailable-section .grid{margin-top:12px}
 .incoming-section{border-top-color:#fc3e0973}
 .inquiry-preview{font-weight:500;background:#dad3ff;padding:14px;border-radius:12px}
+.works-placeholder{
+  border:1px solid #4a151336;border-radius:12px;
+  background:#fcfaf5df;padding:26px 20px;margin:22px 0;
+}
+.works-placeholder h2{margin:0 0 8px}
+.works-placeholder p{opacity:.85}
 .arrival-toggle{display:flex;align-items:center;gap:5px;font-size:12px;white-space:nowrap}
 .arrival-toggle input{height:18px;width:18px;accent-color:#fc3e09}
+#form{background:#fcfaf5ee;padding:14px;border-radius:12px;margin:10px 0 0;scroll-margin-top:12px}
+#inquiry,#about,#works,#inventory,#receipt{background:#fcfaf5e3;padding:16px;border-radius:12px}
 @media(max-width:480px){
- header{flex-wrap:wrap;gap:12px}
- nav{width:100%;justify-content:space-between}
- nav button{flex:1;font-size:13px;padding:8px 3px}
- .brand-hero{grid-template-columns:minmax(0,1fr) 37%;min-height:150px}
- .brand-hero h1{font-size:clamp(36px,9vw,54px);overflow-wrap:normal}
- .stockrow{flex-wrap:wrap}
- .stockrow label:first-child{flex-basis:100%}
+  header{flex-wrap:wrap;gap:12px}
+  nav{width:100%;justify-content:space-between}
+  nav button{flex:1;font-size:13px;padding:8px 3px}
+  .stockrow{flex-wrap:wrap}
+  .stockrow label:first-child{flex-basis:100%}
 }
-@media(prefers-reduced-motion:reduce){
- .brand-motion{background-size:cover}
-}
+@media(prefers-reduced-motion:reduce){#ambientBg{opacity:.3}}
