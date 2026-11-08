@@ -42,14 +42,15 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn('/assets/supplier/', JS)
         self.assertNotIn('colours-atlas.webp', JS)
         self.assertNotIn('backgroundSize="400%', JS)
-        self.assertIn('object-fit:contain', CSS)
+        self.assertIn('object-fit:cover', CSS)
         self.assertIn('object-position:center center', CSS)
         self.assertNotIn('filter:brightness(.65)', CSS)
 
     def test_clean_navigation_and_no_unwanted_art(self):
         self.assertLess(HTML.index('id="aboutNav"'), HTML.index('id="worksNav"'))
         self.assertNotIn("Твоя пластинка", HTML)
-        self.assertNotIn("mascot", HTML.lower())
+        self.assertIn('src="/assets/mascot-lilac.svg"', HTML)
+        self.assertNotIn("brand-mascot", HTML)
         self.assertNotIn('color-disc.mp4', HTML)
         self.assertNotIn("↗", HTML)
         self.assertNotIn("brand-hero", CSS)
