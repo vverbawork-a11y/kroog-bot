@@ -12,6 +12,7 @@ from urllib.parse import parse_qsl, quote
 
 from aiohttp import web
 
+import artwork
 import calculator as prices
 import config
 import database
@@ -99,34 +100,61 @@ async def place(request):
     user = identity(request)
     if not config.ADMIN_ID:
         raise web.HTTPServiceUnavailable(text="Приём заказов временно закрыт.")
-    data = await payload(request)
-    qty = number(data,"quantity",1)
-    color_id = number(data,"color",1)
-    if any(type(data.get(k)) is not bool for k in ("sleeve","label","rush")):
-        raise web.HTTPBadRequest(text="Проверьте параметры заказа.")
-    contact = data.get("contact")
-    if not isinstance(contact,str) or not 2 <= len(contact.strip()) <= 120:
-        raise web.HTTPBadRequest(text="Укажите контакт для менеджера.")
+    data, files, stage = await artwork.receive(request)
+    saved = None
+    committed = False
     try:
-        request_id = str(uuid.UUID(str(data.get("request_id"))))
-    except ValueError:
-        raise web.HTTPBadRequest(text="Откройте форму заново.")
-    with closing(database.get_connection()) as db, db:
-        db.execute("BEGIN IMMEDIATE")
-        old = db.execute("SELECT id FROM shop_orders WHERE user_id=? AND request_id=?", (user["id"],request_id)).fetchone()
-        if old:
-            return web.json_response({"id":old["id"]})
-        color = db.execute("SELECT * FROM colors WHERE id=?", (color_id,)).fetchone()
-        if not color or color["stock"] < qty:
-            raise web.HTTPConflict(text="Остаток изменился. Выберите доступное количество.")
-        totals = prices.calculate(color["is_black"], qty, data["sleeve"], data["label"], data["rush"])
-        details = dict(color=color["name"], contact=contact.strip(), user_id=user["id"],
-                       name=" ".join(filter(None,(user.get("first_name"),user.get("last_name")))),
-                       sleeve=data["sleeve"], label=data["label"], rush=data["rush"], **totals)
-        db.execute("UPDATE colors SET stock=stock-? WHERE id=?", (qty,color_id))
-        order = db.execute("INSERT INTO shop_orders(user_id,request_id,color_id,quantity,details) VALUES(?,?,?,?,?)",
-                           (user["id"],request_id,color_id,qty,json.dumps(details,ensure_ascii=False)))
-        return web.json_response({"id":order.lastrowid},status=201)
+        qty = number(data, "quantity", 1)
+        color_id = number(data, "color", 1)
+        if any(type(data.get(k)) is not bool for k in ("sleeve", "label", "rush")):
+            raise web.HTTPBadRequest(text="Проверьте параметры заказа.")
+        if any(files.get(k) for k in ("sleeve_front", "sleeve_back")) and not data["sleeve"]:
+            raise web.HTTPBadRequest(text="Включите печать конверта для приложенных макетов.")
+        if any(files.get(k) for k in ("label_a", "label_b")) and not data["label"]:
+            raise web.HTTPBadRequest(text="Включите печать яблока для приложенных макетов.")
+        contact = data.get("contact")
+        if not isinstance(contact, str) or not 2 <= len(contact.strip()) <= 120:
+            raise web.HTTPBadRequest(text="Укажите контакт для менеджера.")
+        try:
+            request_id = str(uuid.UUID(str(data.get("request_id"))))
+        except (ValueError, TypeError):
+            raise web.HTTPBadRequest(text="Откройте форму заново.")
+        with closing(database.get_connection()) as db:
+            try:
+                db.execute("BEGIN IMMEDIATE")
+                old = db.execute(
+                    "SELECT id FROM shop_orders WHERE user_id=? AND request_id=?",
+                    (user["id"], request_id)
+                ).fetchone()
+                if old:
+                    db.rollback()
+                    return web.json_response({"id": old["id"]})
+                color = db.execute("SELECT * FROM colors WHERE id=?", (color_id,)).fetchone()
+                if not color or color["stock"] < qty:
+                    raise web.HTTPConflict(text="Остаток изменился. Выберите доступное количество.")
+                totals = prices.calculate(color["is_black"], qty, data["sleeve"], data["label"], data["rush"])
+                details = dict(
+                    color=color["name"], contact=contact.strip(), user_id=user["id"],
+                    name=" ".join(filter(None, (user.get("first_name"), user.get("last_name")))),
+                    sleeve=data["sleeve"], label=data["label"], rush=data["rush"],
+                    files=files, **totals
+                )
+                db.execute("UPDATE colors SET stock=stock-? WHERE id=?", (qty, color_id))
+                order = db.execute(
+                    "INSERT INTO shop_orders(user_id,request_id,color_id,quantity,details) VALUES(?,?,?,?,?)",
+                    (user["id"], request_id, color_id, qty, json.dumps(details, ensure_ascii=False))
+                )
+                saved = artwork.finalize(stage, order.lastrowid, files)
+                db.commit()
+                committed = True
+                return web.json_response({"id": order.lastrowid}, status=201)
+            except Exception:
+                db.rollback()
+                raise
+    finally:
+        artwork.discard(stage)
+        if not committed and saved:
+            artwork.discard(saved)
 
 
 async def stock(request):
@@ -155,6 +183,23 @@ async def manager_order(request):
         return web.json_response(dict(json.loads(row["details"]), id=row["id"], cancelled=cancelled))
 
 
+async def download_artwork(request):
+    admin(request)
+    order_id = int(request.match_info["id"])
+    field = request.match_info["field"]
+    with closing(database.get_connection()) as db:
+        row = db.execute("SELECT details FROM shop_orders WHERE id=?", (order_id,)).fetchone()
+    if not row:
+        raise web.HTTPNotFound(text="Заказ не найден.")
+    details = json.loads(row["details"])
+    path, original = artwork.stored_file(order_id, details.get("files", {}), field)
+    return web.FileResponse(path, headers={
+        "Content-Disposition": "attachment; filename*=UTF-8''" + quote(original),
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+    })
+
+
 async def notify_orders(bot):
     from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
     while True:
@@ -166,6 +211,7 @@ async def notify_orders(bot):
             options = ", ".join(title for k,title in (("sleeve","конверт"),("label","яблоко"),("rush","ускорение")) if o[k]) or "без доплат"
             message = (f"Заказ №{ref}\n{o['color']} × {o['quantity']}\n{options}\n"
                        f"Итого {o['total']} ₽\n{o['name']} · {o['contact']}")
+            message += f"\nМакеты прикреплены: {len(o.get('files', {}))}" if o["sleeve"] or o["label"] else ""
             link = WebAppInfo(url=f"{config.MINIAPP_URL}/?order={ref}")
             try:
                 await bot.send_message(config.ADMIN_ID, message, parse_mode=None,
@@ -179,7 +225,7 @@ async def notify_orders(bot):
 
 
 def application():
-    app = web.Application(client_max_size=16384)
+    app = web.Application(client_max_size=90 * 1024 * 1024)
     async def home(request):
         return web.FileResponse(APP / "index.html")
     app.router.add_get("/", home)
@@ -188,6 +234,7 @@ def application():
     app.router.add_post("/api/stock", stock)
     app.router.add_get(r"/api/orders/{id:\d+}", manager_order)
     app.router.add_post(r"/api/orders/{id:\d+}/cancel", manager_order)
+    app.router.add_get(r"/api/orders/{id:\d+}/artwork/{field}", download_artwork)
     app.router.add_static("/assets", APP / "assets")
     app.router.add_static("/photos", PHOTOS)
     app.router.add_static("/templates", ROOT / "templates")

@@ -13,9 +13,11 @@ function display(panel) {
   window.scrollTo(0,0);
 }
 async function api(path,data) {
+  const isForm = data instanceof FormData;
+  const headers = {"X-Telegram-Init-Data":tg?.initData || ""};
+  if (data && !isForm) headers["Content-Type"] = "application/json";
   const response = await fetch("/api/"+path,{method:data ? "POST":"GET",
-    headers:{"X-Telegram-Init-Data":tg?.initData || "","Content-Type":"application/json"},
-    body:data ? JSON.stringify(data):undefined,cache:"no-store"});
+    headers, body:data ? (isForm ? data : JSON.stringify(data)):undefined,cache:"no-store"});
   if (!response.ok) throw new Error((await response.text()).slice(0,240));
   return response.json();
 }
@@ -39,7 +41,7 @@ function prices() {
 }
 function choose(c, fromClick=false) {
   if (fromClick) {choosing=false;requestId=null;window.scrollTo(0,0);}
-  $("selectedName").textContent=c.name+" · "+c.stock+" шт. в наличии";
+  $("selectedName").textContent=c.name+" · доступно к заказу "+c.stock+" шт.";
   $("colors").hidden=!choosing;$("colorHeading").hidden=!choosing;
   color = c;
   for (const b of $("colors").children) b.setAttribute("aria-pressed",String(Number(b.dataset.id)===c.id));
@@ -63,9 +65,9 @@ async function load() {
     tile.className="tile"; tile.dataset.id=c.id;
     const pic=document.createElement(c.photo ? "img":"span");
     if (c.photo) {pic.src=c.photo;pic.alt=c.name;pic.loading="lazy";}
-    else {pic.className="no-photo";pic.textContent="Фото готовится";}
+    else {pic.className="stock-empty";pic.textContent=c.emoji || "○";pic.setAttribute("aria-label","Фотография пока недоступна");}
     const caption=document.createElement("span"),title=document.createElement("strong"),info=document.createElement("small");
-    caption.className="caption";title.textContent=c.name;info.textContent=c.stock+" шт. · "+money(c.price);
+    caption.className="caption";title.textContent=c.name;info.textContent="Доступно к заказу: "+c.stock+" шт. · "+money(c.price)+" / пластинка";
     caption.append(title,info);tile.append(pic,caption);$("colors").append(tile);
   }
   if (list.length) choose(list.find(c=>c.id===color?.id)||list[0]);
@@ -89,19 +91,56 @@ function renderStock() {
     row.append(label,input,save);$("stocks").append(row);
   }
 }
-$("form").oninput=()=>{requestId=null;prices();};
+const ARTWORK = [
+  ["sleeve_front","sleeve"],["sleeve_back","sleeve"],
+  ["label_a","label"],["label_b","label"]
+];
+const ARTWORK_NAMES = {
+  sleeve_front:"Конверт · передняя сторона",
+  sleeve_back:"Конверт · задняя сторона",
+  label_a:"Яблоко · сторона A",
+  label_b:"Яблоко · сторона B"
+};
+function syncArtwork() {
+  $("sleeveFiles").hidden = !$("sleeve").checked;
+  $("labelFiles").hidden = !$("label").checked;
+  for (const [key] of ARTWORK) {
+    const file = $(key).files[0];
+    $(key+"_name").textContent = file ? file.name : "Файл не выбран";
+  }
+}
+for (const [key] of ARTWORK) {
+  $(key).addEventListener("change",()=>{
+    const file = $(key).files[0];
+    if (file && file.size > 20*1024*1024) {
+      $(key).value = "";
+      $("status").textContent = "Файл больше 20 МБ. Прикрепи файл меньшего размера.";
+    }
+    requestId=null;
+    syncArtwork();
+  });
+}
+$("form").oninput=()=>{requestId=null;prices();syncArtwork();};
+syncArtwork();
 $("minus").onclick=()=>{$("qty").stepDown();requestId=null;prices();};
 $("plus").onclick=()=>{$("qty").stepUp();requestId=null;prices();};
 $("form").onsubmit=async e=>{
   e.preventDefault();if (!color || busy) return;busy=true;$("submit").disabled=true;
   requestId ||= crypto.randomUUID();
   try {
-    const result=await api("orders",{color:color.id,quantity:$("qty").valueAsNumber,
+    const payload = {color:color.id,quantity:$("qty").valueAsNumber,
       sleeve:$("sleeve").checked,label:$("label").checked,rush:$("rush").checked,
-      contact:$("contact").value,request_id:requestId});
+      contact:$("contact").value,request_id:requestId};
+    const formData = new FormData();
+    formData.append("payload", JSON.stringify(payload));
+    for (const [key,option] of ARTWORK) {
+      if ($(option).checked && $(key).files[0])
+        formData.append(key, $(key).files[0], $(key).files[0].name);
+    }
+    const result=await api("orders",formData);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
     $("receiptText").textContent="Заявка принята. Менеджер свяжется с тобой по указанному контакту.";
-    $("cancelOrder").hidden=true;requestId=null;$("form").reset();
+    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();syncArtwork();
   } catch(error) {await load().catch(()=>{});$("status").textContent=error.message;}
   finally {busy=false;$("submit").disabled=false;}
 };
@@ -111,6 +150,26 @@ async function detail(id) {
   const opts=[o.sleeve&&"цветной конверт",o.label&&"цветное яблоко",o.rush&&"срочно"].filter(Boolean).join(", ");
   $("receiptText").textContent=[o.cancelled?"Отменён":"Принят",o.color+" × "+o.quantity,opts||"Без доплат",
     "Итого "+money(o.total),o.name,o.contact,"Telegram ID "+o.user_id].join("\n");
+  $("receiptFiles").replaceChildren();
+  for (const [key,entry] of Object.entries(o.files || {})) {
+    if (!ARTWORK_NAMES[key] || !entry?.name) continue;
+    const b = button("Скачать · "+ARTWORK_NAMES[key]+" · "+entry.name,async()=>{
+      b.disabled=true;
+      try {
+        const response=await fetch("/api/orders/"+id+"/artwork/"+key,{
+          headers:{"X-Telegram-Init-Data":tg?.initData || ""},cache:"no-store"
+        });
+        if (!response.ok) throw new Error((await response.text()).slice(0,240));
+        const url=URL.createObjectURL(await response.blob());
+        const a=document.createElement("a");
+        a.href=url;a.download=entry.name;
+        document.body.append(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),60000);
+      } catch(e) {$("status").textContent=e.message;}
+      finally {b.disabled=false;}
+    });
+    $("receiptFiles").append(b);
+  }
   $("cancelOrder").hidden=o.cancelled;
   $("cancelOrder").onclick=async()=>{
     if(!confirm("Отменить заказ и вернуть "+o.quantity+" шт. на склад?"))return;
