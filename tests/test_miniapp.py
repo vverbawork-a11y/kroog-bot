@@ -45,7 +45,7 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
             "user": json.dumps({"id": user_id, "first_name": "Тест"}, ensure_ascii=False,
                                separators=(",", ":")),
         }
-        signed = "\\n".join(f"{key}={values[key]}" for key in sorted(values))
+        signed = "\n".join(f"{key}={values[key]}" for key in sorted(values))
         secret = hmac.digest(b"WebAppData", config.BOT_TOKEN.encode(), "sha256")
         values["hash"] = hmac.new(secret, signed.encode(), "sha256").hexdigest()
         return {"X-Telegram-Init-Data": urlencode(values)}
