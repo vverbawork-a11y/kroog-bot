@@ -5,6 +5,15 @@ const money = n => n.toLocaleString("ru-RU") + " ₽";
 const panels = ["shop","inventory","about","receipt","inquiry","works"];
 let catalog, color, requestId, busy = false, choosing = true;
 let interestColor = null, interestRequestId = null;
+function syncVideos() {
+  const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  for (const video of document.querySelectorAll(".brand-motion")) {
+    const pane=video.closest("section");
+    if (reduced || !pane || pane.hidden) { video.pause(); continue; }
+    if (!video.getAttribute("src")) {video.src=video.dataset.src;video.load();}
+    video.play().catch(()=>{}); // Animated poster remains visible if autoplay is blocked.
+  }
+}
 function display(panel) {
   for (const name of panels) $(name).hidden = name !== panel;
   for (const [id,name] of [["shopNav","shop"],["aboutNav","about"],["worksNav","works"],["stockNav","inventory"]]) {
@@ -12,6 +21,7 @@ function display(panel) {
   }
   $("status").textContent = "";
   window.scrollTo(0,0);
+  syncVideos();
 }
 async function api(path,data) {
   const isForm = data instanceof FormData;
@@ -60,13 +70,16 @@ async function load() {
   $("labelPrice").textContent = "Две стороны · +"+money(catalog.label)+" за экземпляр";
   $("rushPrice").textContent = "+"+catalog.rush+"% · срок согласует менеджер";
   const available = catalog.colors.filter(c=>c.stock>0);
-  const unavailable = catalog.colors.filter(c=>c.stock<=0);
+  const incoming = catalog.colors.filter(c=>c.stock<=0 && Boolean(c.incoming));
+  const unavailable = catalog.colors.filter(c=>c.stock<=0 && !c.incoming);
   $("colors").replaceChildren();
+  $("incomingColors").replaceChildren();
   $("unavailableColors").replaceChildren();
   $("unavailableSection").hidden = unavailable.length === 0;
+  $("incomingSection").hidden = incoming.length === 0;
   function makeTile(c, isAvailable) {
     const tile = button("",()=>isAvailable ? choose(c,true) : showInquiry(c));
-    tile.className = isAvailable ? "tile" : "tile tile-unavailable";
+    tile.className = isAvailable ? "tile" : (c.incoming ? "tile tile-incoming" : "tile tile-unavailable");
     tile.dataset.id=c.id;
     let pic;
     if (Number.isInteger(c.atlas) && c.atlas>=0 && c.atlas<32) {
@@ -92,7 +105,7 @@ async function load() {
     if (!isAvailable) {
       const flag=document.createElement("span");
       flag.className="stock-overlay";
-      flag.textContent="Нет в наличии";
+      flag.textContent=c.incoming ? "Скоро в наличии" : "Нет в наличии";
       media.append(flag);
     }
     const caption=document.createElement("span");
@@ -101,11 +114,12 @@ async function load() {
     caption.className="caption";title.textContent=c.name;
     info.textContent=isAvailable
       ? "Доступно: "+c.stock+" шт. · от "+money(c.price)
-      : "От "+money(c.price)+" · Узнать о поступлении";
+      : "От "+money(c.price)+" · "+(c.incoming ? "В пути · сообщить о поступлении" : "Узнать о поступлении");
     caption.append(title,info);tile.append(media,caption);
     return tile;
   }
   for (const c of available) $("colors").append(makeTile(c,true));
+  for (const c of incoming) $("incomingColors").append(makeTile(c,false));
   for (const c of unavailable) $("unavailableColors").append(makeTile(c,false));
   if (available.length) choose(available.find(c=>c.id===color?.id)||available[0]);
   else {
@@ -118,7 +132,7 @@ async function load() {
 function showInquiry(c) {
   interestColor=c;
   interestRequestId=null;
-  $("inquiryColor").textContent=c.name+" · от "+money(c.price)+" за пластинку";
+  $("inquiryColor").textContent=c.name+" · "+(c.incoming ? "Скоро в наличии" : "Нет в наличии") +" · от "+money(c.price)+" за пластинку";
   if (!$("inquiryContact").value) $("inquiryContact").value=catalog?.contact || "";
   display("inquiry");
 }
@@ -147,18 +161,34 @@ $("inquiryBack").onclick=()=>openShop();
 function renderStock() {
   $("stocks").replaceChildren();
   for (const c of catalog.colors) {
-    const row=document.createElement("div"),label=document.createElement("label"),input=document.createElement("input");
-    row.className="stockrow";label.textContent=c.name;input.type="number";input.min=0;input.max=1000000;
+    const row=document.createElement("div");
+    const label=document.createElement("label");
+    const input=document.createElement("input");
+    row.className="stockrow";label.textContent=c.name;
+    input.type="number";input.min=0;input.max=1000000;
     input.value=c.stock;input.id="stock-"+c.id;label.htmlFor=input.id;
+    const arrival=document.createElement("label");
+    arrival.className="arrival-toggle";
+    const checkbox=document.createElement("input");
+    checkbox.type="checkbox";checkbox.checked=Boolean(c.incoming);
+    checkbox.disabled=Number(c.stock)>0;
+    const arrivalText=document.createElement("span");
+    arrivalText.textContent="В пути";
+    arrival.append(checkbox,arrivalText);
+    input.addEventListener("input",()=>{
+      checkbox.disabled=Number(input.value)>0;
+      if (checkbox.disabled)checkbox.checked=false;
+    });
     const save=button("Сохранить",async()=>{
       save.disabled=true;
       try {
-        await api("stock",{color:c.id,stock:input.valueAsNumber,previous:c.stock});
+        await api("stock",{color:c.id,stock:input.valueAsNumber,previous:c.stock,
+          incoming:checkbox.checked,previous_incoming:Boolean(c.incoming)});
         await load();$("status").textContent=c.name+" · сохранено";
       } catch(e) {await load().catch(()=>{});$("status").textContent=e.message;}
       finally {save.disabled=false;}
     });
-    row.append(label,input,save);$("stocks").append(row);
+    row.append(label,input,arrival,save);$("stocks").append(row);
   }
 }
 const ARTWORK = [
