@@ -192,7 +192,7 @@ async def inquiry(request):
         request_id = str(uuid.UUID(str(data.get("request_id"))))
     except (ValueError, TypeError):
         raise web.HTTPBadRequest(text="Откройте форму заново.")
-    with closing(database.get_connection()) as db:
+    with closing(database.get_connection()) as db, db:
         db.execute("BEGIN IMMEDIATE")
         existing = db.execute(
             "SELECT id FROM shop_inquiries WHERE user_id=? AND request_id=?",
