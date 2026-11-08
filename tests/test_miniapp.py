@@ -135,8 +135,16 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(by_name["Оранжевый прозрачный"]["atlas"], 24)
         self.assertEqual(by_name["Прозрачный"]["price"], 3900)
         self.assertEqual(by_name["Ночной переливающийся"]["price"], 6500)
+        self.assertNotIn("Русалка", by_name)
         self.assertEqual(by_name["Чёрный"]["stock"], 5)
         self.assertEqual(by_name["Оранжевый прозрачный"]["stock"], 0)
+
+    async def test_manager_only_sees_canonical_night_colour(self):
+        response = await self.client.get("/api/catalog", headers=self.headers(42))
+        self.assertEqual(response.status, 200)
+        names = {c["name"] for c in (await response.json())["colors"]}
+        self.assertIn("Ночной переливающийся", names)
+        self.assertNotIn("Русалка", names)
 
     async def test_out_of_stock_inquiry_persists_and_is_idempotent(self):
         response = await self.client.get("/api/catalog", headers=self.headers(43))
