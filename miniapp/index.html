@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<link rel="stylesheet" href="/assets/brand.css"><link rel="stylesheet" href="/assets/shop.css?v=8">
+<link rel="stylesheet" href="/assets/brand.css"><link rel="stylesheet" href="/assets/shop.css?v=9">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script defer src="/assets/shop.js?v=8"></script>
+<script defer src="/assets/shop.js?v=9"></script>
 </head>
 <body>
 <video id="ambientBg" poster="/assets/white-violet-bg.png" data-src="/assets/white-violet-lines-hq.mp4" autoplay muted loop playsinline preload="none" aria-hidden="true"></video>
@@ -13,52 +13,27 @@
 <main>
 <section id="shop">
 <div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><p class="help" id="stockHint">Указана цена только за пластинку, без печати.</p><div id="colors" class="grid"></div>
-<form id="form" hidden><button type="button" id="changeColor">← Выбрать другой цвет</button><h2 id="selectedName"></h2><div class="line"><label for="qty">Количество</label><div class="counter"><button type="button" id="minus" aria-label="Меньше">−</button><input id="qty" type="number" min="1" step="1" value="1" required><button type="button" id="plus" aria-label="Больше">+</button></div></div>
+<form id="form" hidden>
+<button type="button" id="changeColor" class="text-back">← Другой цвет</button>
+<h2 id="selectedName"></h2>
+<div class="line"><label for="qty">Количество</label><div class="counter"><button type="button" id="minus" aria-label="Меньше">−</button><input id="qty" type="number" min="1" step="1" value="1" required><button type="button" id="plus" aria-label="Больше">+</button></div></div>
 <fieldset class="audio-setup" id="audioSetup">
-<legend>Музыка на пластинке</legend>
-<p class="help">12″ · Выбери скорость и порядок композиций. Если треклист ещё не готов, можно заполнить его позже.</p>
-<div class="rpm-switch" role="radiogroup" aria-label="Скорость воспроизведения">
-<label><input type="radio" name="rpm" value="33" checked><span>33⅓ RPM</span></label>
-<label><input type="radio" name="rpm" value="45"><span>45 RPM</span></label>
+<legend>Скорость записи</legend>
+<div class="rpm-switch" role="radiogroup" aria-label="Скорость записи">
+<label><input type="radio" name="rpm" value="33" checked><span><strong>33⅓ RPM</strong><small>Больше музыки<br>до 21 мин / сторона</small></span></label>
+<label><input type="radio" name="rpm" value="45"><span><strong>45 RPM</strong><small>Чуть лучше качество<br>до 15 мин / сторона</small></span></label>
 </div>
-<p class="rpm-time" id="rpmTime">Ориентировочно до 21 минуты на сторону.</p>
-<p class="help">Длительность ориентировочная: она зависит от звука, расстояния между дорожками и режима нарезки. Окончательно согласуем её перед изготовлением.</p>
-<div class="track-sides">
-<label for="tracksA"><strong>Сторона A</strong><span class="help">Каждый трек — с новой строки, по порядку.</span>
-<textarea id="tracksA" rows="3" maxlength="1000" placeholder="Название первого трека&#10;Название второго трека"></textarea><small id="trackCountA">Номера A1, A2… проставятся автоматически.</small></label>
-<label for="tracksB"><strong>Сторона B</strong><span class="help">Можно оставить пустой, если запись односторонняя.</span>
-<textarea id="tracksB" rows="3" maxlength="1000" placeholder="Название первого трека&#10;Название второго трека"></textarea><small id="trackCountB">Номера B1, B2… проставятся автоматически.</small></label>
-</div>
-<label class="contact audio-link" for="audioLink">Ссылка на аудио (необязательно)<input id="audioLink" type="url" inputmode="url" maxlength="800" placeholder="https://drive.google.com/…"></label>
-<p class="help">Аудиофайлы можно передать по ссылке на облако или позже менеджеру. Желательно WAV, AIFF или FLAC. Для порядка удобно подписывать файлы A1, A2, B1, B2…</p>
+<p class="rpm-time" id="rpmTime">Максимум 21 минута на сторону.</p>
 </fieldset>
+<div class="options-label">Дополнительно</div>
 <label class="line"><span>Цветная печать конверта<small id="sleevePrice"></small></span><input type="checkbox" id="sleeve"></label>
-<div class="artwork-group" id="sleeveFiles" hidden>
-<a class="template-link" href="/templates/envelope/Макет_конверт.pdf" target="_blank" rel="noopener">Скачать макет конверта · PDF</a>
-<p class="help">Прикрепи изображения для печати сейчас или отправь менеджеру позже.</p>
-<div class="upload-grid">
-<label class="upload-option">Передняя сторона
-<input type="file" id="sleeve_front" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
-<span class="file-cta">Прикрепить файл</span><small id="sleeve_front_name">Не выбран</small></label>
-<label class="upload-option">Задняя сторона
-<input type="file" id="sleeve_back" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
-<span class="file-cta">Прикрепить файл</span><small id="sleeve_back_name">Не выбран</small></label>
-</div></div>
 <label class="line"><span>Цветное яблоко<small id="labelPrice"></small></span><input type="checkbox" id="label"></label>
-<div class="artwork-group" id="labelFiles" hidden>
-<a class="template-link" href="/templates/label/Макет_яблоко.pdf" target="_blank" rel="noopener">Скачать макет яблока · PDF</a>
-<p class="help">Для каждой стороны пластинки можно прикрепить отдельный макет.</p>
-<div class="upload-grid">
-<label class="upload-option">Сторона A
-<input type="file" id="label_a" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
-<span class="file-cta">Прикрепить файл</span><small id="label_a_name">Не выбран</small></label>
-<label class="upload-option">Сторона B
-<input type="file" id="label_b" accept=".jpg,.jpeg,.png,.pdf,.tif,.tiff,.psd,.ai">
-<span class="file-cta">Прикрепить файл</span><small id="label_b_name">Не выбран</small></label>
-</div></div>
 <label class="line"><span>Ускоренная нарезка<small id="rushPrice"></small></span><input type="checkbox" id="rush"></label>
-<label class="contact">Как с тобой связаться?<input id="contact" required minlength="2" maxlength="120" placeholder="@username или телефон"></label>
-<div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div><button class="action" id="submit">Отправить заказ</button><small>Макеты: JPG, PNG, PDF, TIFF, PSD или AI · до 20 МБ каждый. Менеджер согласует аудио, оформление и оплату.</small></form>
+<label class="contact">Контакт для связи<input id="contact" required minlength="2" maxlength="120" placeholder="@username или телефон" autocomplete="off"></label>
+<div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div>
+<button class="action" id="submit">Оформить заказ</button>
+<p class="checkout-note">После заказа менеджер свяжется с тобой, чтобы получить музыку и макеты, согласовать детали и оплату.</p>
+</form>
 </section>
 <section id="inquiry" hidden>
   <button type="button" id="inquiryBack">← Вернуться к цветам</button>
@@ -72,10 +47,7 @@
 </section>
 <section id="works" hidden>
 <h1>Наши работы</h1>
-<div class="works-scene">
-<img class="works-mascot" src="/assets/mascot-lilac.svg" alt="" aria-hidden="true" loading="lazy">
-<h2>Скоро здесь появятся фотографии готовых релизов и отзывы их авторов.</h2>
-</div>
+<p class="works-text">Скоро здесь появятся фотографии готовых релизов и отзывы их авторов.</p>
 </section>
 <section id="about" hidden>
 <h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b> Мы нарезаем твою музыку на винил и собираем каждый экземпляр отдельно — от звуковой дорожки до оформления и упаковки.</p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Ты выбираешь цвет винила, конверт и оформление яблок, а мы помогаем подготовить материалы к производству.</p><p>Ориентировочный срок — 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Яблоко · PDF</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>

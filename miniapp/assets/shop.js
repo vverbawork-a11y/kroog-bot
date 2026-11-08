@@ -107,6 +107,13 @@ async function load() {
     }
     const media=document.createElement("span");
     media.className="tile-media";
+    if (pic.tagName === "IMG") {
+      // Render directly as a cropped CSS background to avoid WebKit's replaced-
+      // image sizing gaps at the top of some photos. Original JPEGs remain intact.
+      media.classList.add("has-vinyl-photo");
+      media.style.backgroundImage="url("+JSON.stringify(pic.src)+")";
+      if (Number.isInteger(c.atlas)) media.dataset.atlas=String(c.atlas);
+    }
     media.append(pic);
     if (!isAvailable) {
       const flag=document.createElement("span");
@@ -202,54 +209,16 @@ function renderStock() {
     row.append(label,input,arrival,save);$("stocks").append(row);
   }
 }
-const ARTWORK = [
-  ["sleeve_front","sleeve"],["sleeve_back","sleeve"],
-  ["label_a","label"],["label_b","label"]
-];
-const ARTWORK_NAMES = {
-  sleeve_front:"Конверт · передняя сторона",
-  sleeve_back:"Конверт · задняя сторона",
-  label_a:"Яблоко · сторона A",
-  label_b:"Яблоко · сторона B"
-};
-function syncArtwork() {
-  $("sleeveFiles").hidden = !$("sleeve").checked;
-  $("labelFiles").hidden = !$("label").checked;
-  for (const [key] of ARTWORK) {
-    const file = $(key).files[0];
-    $(key+"_name").textContent = file ? file.name : "Файл не выбран";
-  }
-}
-for (const [key] of ARTWORK) {
-  $(key).addEventListener("change",()=>{
-    const file = $(key).files[0];
-    if (file && file.size > 20*1024*1024) {
-      $(key).value = "";
-      $("status").textContent = "Файл больше 20 МБ. Прикрепи файл меньшего размера.";
-    }
-    requestId=null;
-    syncArtwork();
-  });
-}
-// Order music configuration. Tracks are saved as an ordered list for the manager.
+// Minimal checkout: audio, tracklist and print files are collected by the manager.
 function musicGuide() {
   const rpm = document.querySelector('input[name="rpm"]:checked')?.value || "33";
   $("rpmTime").textContent = rpm === "45"
-    ? "Ориентировочно до 15 минут на сторону при 45 RPM."
-    : "Ориентировочно до 21 минуты на сторону при 33⅓ RPM.";
-  for (const side of ["A","B"]) {
-    const lines = $(side === "A" ? "tracksA" : "tracksB").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    $(side === "A" ? "trackCountA" : "trackCountB").textContent = lines.length
-      ? lines.map((_,i)=>side+(i+1)).join(", ")+" · "+lines.length+" тр."
-      : "Номера "+side+"1, "+side+"2… проставятся автоматически.";
-  }
+    ? "Максимум 15 минут на сторону."
+    : "Максимум 21 минута на сторону.";
 }
 for (const radio of document.querySelectorAll('input[name="rpm"]')) radio.addEventListener("change",musicGuide);
-for (const field of ["tracksA","tracksB"]) $(field).addEventListener("input",musicGuide);
 musicGuide();
-
-$("form").oninput=()=>{requestId=null;prices();syncArtwork();musicGuide();};
-syncArtwork();
+$("form").oninput=()=>{requestId=null;prices();musicGuide();};
 $("minus").onclick=()=>{$("qty").stepDown();requestId=null;prices();};
 $("plus").onclick=()=>{$("qty").stepUp();requestId=null;prices();};
 $("form").onsubmit=async e=>{
@@ -259,19 +228,11 @@ $("form").onsubmit=async e=>{
     const payload = {color:color.id,quantity:$("qty").valueAsNumber,
       sleeve:$("sleeve").checked,label:$("label").checked,rush:$("rush").checked,
       contact:$("contact").value,request_id:requestId,
-      rpm:Number(document.querySelector('input[name="rpm"]:checked')?.value||33),
-      tracks_a:$("tracksA").value,tracks_b:$("tracksB").value,
-      audio_link:$("audioLink").value.trim()};
-    const formData = new FormData();
-    formData.append("payload", JSON.stringify(payload));
-    for (const [key,option] of ARTWORK) {
-      if ($(option).checked && $(key).files[0])
-        formData.append(key, $(key).files[0], $(key).files[0].name);
-    }
-    const result=await api("orders",formData);
+      rpm:Number(document.querySelector('input[name="rpm"]:checked')?.value||33)};
+    const result=await api("orders",payload);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
-    $("receiptText").textContent="Заявка принята. Менеджер свяжется с тобой по указанному контакту.";
-    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();syncArtwork();musicGuide();
+    $("receiptText").textContent="Заказ оформлен! Менеджер свяжется с тобой, чтобы получить музыку и макеты, обсудить детали и оплату.";
+    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();musicGuide();
   } catch(error) {await load().catch(()=>{});$("status").textContent=error.message;}
   finally {busy=false;$("submit").disabled=false;}
 };

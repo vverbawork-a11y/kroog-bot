@@ -286,6 +286,8 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertLess(page.index('id="aboutNav"'),page.index('id="worksNav"'))
         self.assertNotIn('id="incomingSection"', page)
         self.assertIn('id="audioSetup"',page)
+        self.assertNotIn('id="tracksA"',page)
+        self.assertNotIn('id="sleeveFiles"',page)
         self.assertNotIn("brand-mascot",page)
         self.assertNotIn("brand-hero",page)
         self.assertNotIn("Твоя пластинка</h1>",page)
