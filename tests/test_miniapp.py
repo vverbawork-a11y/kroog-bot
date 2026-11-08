@@ -239,6 +239,33 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(database.get_color(row["id"])["incoming"],0)
 
 
+    async def test_music_plan_is_saved_for_manager(self):
+        data = dict(self.params(), sleeve=False, label=False, rpm=45,
+                    tracks_a="Первый трек\nВторой трек",
+                    tracks_b="Финал", audio_link="https://example.com/my-audio")
+        response = await self.submit(data, files=False)
+        self.assertEqual(response.status, 201, await response.text())
+        order_id = (await response.json())["id"]
+        private = await self.client.get(
+            f"/api/orders/{order_id}", headers=self.headers(42))
+        self.assertEqual(private.status, 200)
+        details = await private.json()
+        self.assertEqual(details["rpm"], 45)
+        self.assertEqual(details["tracklist_a"],
+                         ["A1 — Первый трек", "A2 — Второй трек"])
+        self.assertEqual(details["tracklist_b"], ["B1 — Финал"])
+        self.assertEqual(details["audio_link"], "https://example.com/my-audio")
+
+    async def test_invalid_music_options_do_not_reserve_stock(self):
+        for invalid in ({"rpm": 78}, {"rpm": "45"},
+                        {"audio_link": "file:///etc/passwd"},
+                        {"tracks_a": "x" * 1001}):
+            with self.subTest(invalid=invalid):
+                data = dict(self.params(), sleeve=False, label=False, **invalid)
+                response = await self.submit(data, files=False)
+                self.assertEqual(response.status, 400, await response.text())
+                self.assertEqual(database.get_color(1)["stock"], 5)
+
     async def test_original_supplied_photos_are_present(self):
         from pathlib import Path
         base=Path(__file__).resolve().parents[1]/"miniapp"/"assets"/"supplier"
