@@ -3,17 +3,35 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<link rel="stylesheet" href="/assets/brand.css"><link rel="stylesheet" href="/assets/shop.css?v=7">
+<link rel="stylesheet" href="/assets/brand.css"><link rel="stylesheet" href="/assets/shop.css?v=8">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script defer src="/assets/shop.js?v=6"></script>
+<script defer src="/assets/shop.js?v=8"></script>
 </head>
 <body>
 <video id="ambientBg" poster="/assets/white-violet-bg.png" data-src="/assets/white-violet-lines-hq.mp4" autoplay muted loop playsinline preload="none" aria-hidden="true"></video>
 <header><img src="/assets/kroog-logo.svg" width="88" alt="Круг"><nav><button id="shopNav">Заказ</button><button id="aboutNav">О нас</button><button id="worksNav">Работы</button><button id="stockNav" hidden>Склад</button></nav></header>
 <main>
 <section id="shop">
-<div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><p class="help" id="stockHint">Остаток — сколько пластинок этого цвета доступно для заказа сейчас. Указана цена за пластинку без печати.</p><div id="colors" class="grid"></div>
+<div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><p class="help" id="stockHint">Указана цена только за пластинку, без печати.</p><div id="colors" class="grid"></div>
 <form id="form" hidden><button type="button" id="changeColor">← Выбрать другой цвет</button><h2 id="selectedName"></h2><div class="line"><label for="qty">Количество</label><div class="counter"><button type="button" id="minus" aria-label="Меньше">−</button><input id="qty" type="number" min="1" step="1" value="1" required><button type="button" id="plus" aria-label="Больше">+</button></div></div>
+<fieldset class="audio-setup" id="audioSetup">
+<legend>Музыка на пластинке</legend>
+<p class="help">12″ · Выбери скорость и порядок композиций. Если треклист ещё не готов, можно заполнить его позже.</p>
+<div class="rpm-switch" role="radiogroup" aria-label="Скорость воспроизведения">
+<label><input type="radio" name="rpm" value="33" checked><span>33⅓ RPM</span></label>
+<label><input type="radio" name="rpm" value="45"><span>45 RPM</span></label>
+</div>
+<p class="rpm-time" id="rpmTime">Ориентировочно до 21 минуты на сторону.</p>
+<p class="help">Длительность ориентировочная: она зависит от звука, расстояния между дорожками и режима нарезки. Окончательно согласуем её перед изготовлением.</p>
+<div class="track-sides">
+<label for="tracksA"><strong>Сторона A</strong><span class="help">Каждый трек — с новой строки, по порядку.</span>
+<textarea id="tracksA" rows="3" maxlength="1000" placeholder="Название первого трека&#10;Название второго трека"></textarea><small id="trackCountA">Номера A1, A2… проставятся автоматически.</small></label>
+<label for="tracksB"><strong>Сторона B</strong><span class="help">Можно оставить пустой, если запись односторонняя.</span>
+<textarea id="tracksB" rows="3" maxlength="1000" placeholder="Название первого трека&#10;Название второго трека"></textarea><small id="trackCountB">Номера B1, B2… проставятся автоматически.</small></label>
+</div>
+<label class="contact audio-link" for="audioLink">Ссылка на аудио (необязательно)<input id="audioLink" type="url" inputmode="url" maxlength="800" placeholder="https://drive.google.com/…"></label>
+<p class="help">Аудиофайлы можно передать по ссылке на облако или позже менеджеру. Желательно WAV, AIFF или FLAC. Для порядка удобно подписывать файлы A1, A2, B1, B2…</p>
+</fieldset>
 <label class="line"><span>Цветная печать конверта<small id="sleevePrice"></small></span><input type="checkbox" id="sleeve"></label>
 <div class="artwork-group" id="sleeveFiles" hidden>
 <a class="template-link" href="/templates/envelope/Макет_конверт.pdf" target="_blank" rel="noopener">Скачать макет конверта · PDF</a>
@@ -40,17 +58,7 @@
 </div></div>
 <label class="line"><span>Ускоренная нарезка<small id="rushPrice"></small></span><input type="checkbox" id="rush"></label>
 <label class="contact">Как с тобой связаться?<input id="contact" required minlength="2" maxlength="120" placeholder="@username или телефон"></label>
-<div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div><button class="action" id="submit">Отправить заказ</button><small>Макеты: JPG, PNG, PDF, TIFF, PSD или AI · до 20 МБ каждый. Менеджер свяжется с тобой для передачи аудио, недостающих макетов и оплаты.</small></form>
-<div class="unavailable-section incoming-section" id="incomingSection" hidden>
-  <div class="rule"><h2>Скоро в наличии</h2><span>В пути</span></div>
-  <p class="help">Эти пластинки уже в пути. Пока можно оставить запрос — мы сообщим о поступлении.</p>
-  <div id="incomingColors" class="grid"></div>
-</div>
-<div class="unavailable-section" id="unavailableSection" hidden>
-  <div class="rule"><h2>Другие цвета</h2><span>Под заказ</span></div>
-  <p class="help">Эти цвета сейчас отсутствуют на складе. Можно посмотреть их и оставить запрос.</p>
-  <div id="unavailableColors" class="grid"></div>
-</div>
+<div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div><button class="action" id="submit">Отправить заказ</button><small>Макеты: JPG, PNG, PDF, TIFF, PSD или AI · до 20 МБ каждый. Менеджер согласует аудио, оформление и оплату.</small></form>
 </section>
 <section id="inquiry" hidden>
   <button type="button" id="inquiryBack">← Вернуться к цветам</button>
