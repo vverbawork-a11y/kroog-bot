@@ -8,6 +8,8 @@
 import os
 import sqlite3
 
+import colours
+
 # Путь к файлу базы. Локально — kroog.db рядом с проектом.
 # На хостинге зададим переменную DB_PATH с путём к постоянному хранилищу (Volume),
 # иначе остатки на складе будут сбрасываться при перезапуске.
@@ -84,6 +86,14 @@ def init_db() -> None:
         conn.execute(
             "INSERT INTO colors(name, stock, is_black) SELECT ?, 0, 0 "
             "WHERE NOT EXISTS(SELECT 1 FROM colors WHERE name=?)", (name, name)
+        )
+    # Supplier catalogue: new colours are visible in Mini App but not orderable.
+    # Never overwrite existing stock: current warehouse quantities remain intact.
+    for name, _, _ in colours.COLOURS:
+        conn.execute(
+            "INSERT INTO colors(name, stock, is_black) SELECT ?, 0, ? "
+            "WHERE NOT EXISTS(SELECT 1 FROM colors WHERE name=?)",
+            (name, int(name == "Чёрный"), name)
         )
     conn.commit()
     conn.close()

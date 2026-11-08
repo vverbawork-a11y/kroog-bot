@@ -20,3 +20,43 @@
 #receiptFiles{margin:10px 0 18px}
 #receiptFiles button{display:block;width:100%;text-align:left;margin:7px 0;padding:12px;word-break:break-word}
 #submit{font-weight:500}
+
+/* KROOG vivid, lightweight motion. Replaced by actual brand assets when supplied. */
+body{isolation:isolate;min-height:100vh}
+body::before{
+  content:"";position:fixed;inset:-30% -35%;pointer-events:none;z-index:-1;
+  background:radial-gradient(ellipse at 17% 19%,#dad3ff99 0,transparent 43%),
+    radial-gradient(ellipse at 83% 35%,#fc3e0933 0,transparent 38%),
+    radial-gradient(ellipse at 48% 87%,#f5d38d66 0,transparent 46%);
+  animation:kroog-drift 22s ease-in-out infinite alternate;
+}
+@keyframes kroog-drift{0%{transform:translate3d(-2%,-1%,0) rotate(-3deg) scale(1)}100%{transform:translate3d(3%,3%,0) rotate(3deg) scale(1.06)}}
+header,main{position:relative;z-index:1}
+nav button{padding:9px 8px;font-size:15px}
+.tile-media{position:relative;display:block;overflow:hidden;background:white}
+.atlas-photo{display:block;width:100%;aspect-ratio:1;background-repeat:no-repeat;background-position:center;background-color:#fff}
+.tile img,.stock-empty{aspect-ratio:1}
+.tile-unavailable{background:#f8f1ef;border:1px solid #4a151326;transition:transform .18s ease,border-color .18s}
+.tile-unavailable .atlas-photo,.tile-unavailable img{filter:brightness(.60) saturate(.82)}
+.tile-unavailable .tile-media::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,#4a15137d)}
+.stock-overlay{position:absolute;bottom:11px;left:10px;right:10px;z-index:2;color:#fff;font-size:15px;font-weight:500}
+.tile-unavailable .caption small{opacity:.85}
+.unavailable-section{margin-top:38px;padding-top:28px;border-top:1px solid #4a151330}
+.unavailable-section h2{margin:0}
+.unavailable-section .grid{margin-top:14px}
+.tile:active{transform:scale(.98)}
+.inquiry-preview{font-weight:500;background:#dad3ff;padding:14px;border-radius:12px}
+.works-placeholder{border:1px solid #4a15133a;border-radius:18px;background:linear-gradient(140deg,#dad3ff9b,#fcfaf5 56%,#fc3e0928);padding:30px 24px;margin:26px 0;text-align:center}
+.works-placeholder h2{margin:20px 0 9px}
+.works-placeholder p{opacity:.86}
+.works-disc{display:block;width:128px;height:128px;margin:auto;border-radius:100%;
+ background:repeating-radial-gradient(circle at center,#4a1513 0,#4a1513 2px,#69332c 3px,#4a1513 5px,#44110f 7px);
+ box-shadow:0 14px 27px #4a151344;position:relative;animation:record-spin 12s linear infinite}
+.works-disc::after{content:"";display:block;width:42px;height:42px;border:3px solid #fcfaf5;border-radius:50%;
+ background:radial-gradient(circle at center,#fcfaf5 0,#fcfaf5 4px,#fc3e09 5px,#fc3e09 100%);
+ position:absolute;top:43px;left:43px}
+@keyframes record-spin{to{transform:rotate(360deg)}}
+@media(max-width:480px){header{flex-wrap:wrap;gap:12px}header img{width:88px}
+ nav{width:100%;display:flex;justify-content:space-between;gap:4px}
+ nav button{font-size:14px;flex:1;padding:9px 4px}}
+@media(prefers-reduced-motion:reduce){body::before,.works-disc{animation:none}.tile{transition:none}}
