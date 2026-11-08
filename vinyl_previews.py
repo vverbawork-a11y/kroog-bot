@@ -17,7 +17,7 @@ BG = (248, 247, 245)
 STAMP = "centered-v1"
 ANGLES = tuple(
     (math.cos(i * math.pi / 32), math.sin(i * math.pi / 32))
-    for i in range(64) if not 52 <= i <= 76
+    for i in range(64) if not 11 <= i <= 21
 )
 
 
