@@ -139,6 +139,31 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(by_name["Чёрный"]["stock"], 5)
         self.assertEqual(by_name["Оранжевый прозрачный"]["stock"], 0)
 
+    async def test_pink_marble_name_and_legacy_colour_hidden(self):
+        response = await self.client.get("/api/catalog", headers=self.headers(42))
+        self.assertEqual(response.status, 200)
+        names = {item["name"] for item in (await response.json())["colors"]}
+        self.assertIn("Розовый марбл", names)
+        self.assertNotIn("Лиловый марбл", names)
+        self.assertNotIn("Фиолетовый дымчатый", names)
+        # A legacy stock row must retain its quantities when migrated.
+        with database.get_connection() as connection:
+            connection.execute("INSERT INTO colors(name,stock,is_black,incoming) VALUES(?,?,?,?)",
+                               ("Лиловый марбл", 3, 0, 1))
+            connection.commit()
+        database.init_db()
+        with database.get_connection() as connection:
+            record = connection.execute("SELECT stock,incoming FROM colors WHERE name=?",
+                                        ("Розовый марбл",)).fetchone()
+            self.assertIsNotNone(record)
+            self.assertEqual(record["stock"], 3)
+            self.assertEqual(record["incoming"], 1)
+        database.init_db()
+        with database.get_connection() as connection:
+            record = connection.execute("SELECT stock FROM colors WHERE name=?",
+                                        ("Розовый марбл",)).fetchone()
+            self.assertEqual(record["stock"], 3)
+
     async def test_manager_only_sees_canonical_night_colour(self):
         response = await self.client.get("/api/catalog", headers=self.headers(42))
         self.assertEqual(response.status, 200)

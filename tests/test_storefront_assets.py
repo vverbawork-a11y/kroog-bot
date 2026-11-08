@@ -45,22 +45,34 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn('$("stockHint").hidden=!choosing', JS)
         self.assertIn('getBoundingClientRect().top', JS)
 
-    def test_original_photos_are_never_downsampled_into_sprite(self):
-        self.assertIn('/assets/supplier/', JS)
-        self.assertNotIn('colours-atlas.webp', JS)
-        self.assertNotIn('backgroundSize="400%', JS)
-        self.assertIn('background-size:115% 115%!important', CSS)
-        self.assertNotIn('background-size:136% auto!important', CSS)
-        self.assertIn('background-position:50% 85%!important', CSS)
-        self.assertIn('background-position:50% 69%!important', CSS)
-        for index in (7, 8, 10, 21, 22, 24, 29):
-            self.assertIn('data-atlas="' + str(index) + '"', CSS)
+    def test_generated_previews_are_uniform_and_source_images_untouched(self):
+        from tempfile import TemporaryDirectory
+        from PIL import Image
+        from vinyl_previews import generate, BG
+        with TemporaryDirectory() as folder:
+            output = Path(folder)
+            self.assertEqual(generate(ASSETS / "supplier", output), 32)
+            self.assertEqual(generate(ASSETS / "supplier", output), 32)
+            for i in range(32):
+                path = output / f"{i:02}.jpg"
+                self.assertTrue(path.exists(), path.name)
+                with Image.open(path) as image:
+                    self.assertEqual(image.size, (960, 960))
+                    for point in ((0,0),(959,0),(0,959),(959,959)):
+                        value = image.getpixel(point)
+                        self.assertTrue(all(abs(value[j]-BG[j]) <= 5
+                                            for j in range(3)),(path.name,value))
+        self.assertIn('/assets/previews/', JS)
+        self.assertIn('/assets/supplier/', JS)  # fallback/originals untouched
+        self.assertNotIn('media.style.backgroundImage', JS)
+        self.assertNotIn('data-atlas="29"', CSS)
+        self.assertIn('background-image:none!important', CSS)
+        self.assertIn('transform:none!important', CSS)
         self.assertIn('Заказ вне очереди', HTML)
-        self.assertNotIn('Ускоренная нарезка', HTML)
-        self.assertIn('media.classList.add("has-vinyl-photo")', JS)
-        self.assertIn('object-fit:cover', CSS)
-        self.assertIn('object-position:center center', CSS)
-        self.assertNotIn('filter:brightness(.65)', CSS)
+
+    def test_renamed_and_hidden_colours(self):
+        self.assertIn(("Розовый марбл", 5500, 18), colours.COLOURS)
+        self.assertNotIn(("Лиловый марбл", 5500, 18), colours.COLOURS)
 
     def test_clean_navigation_and_no_unwanted_art(self):
         self.assertLess(HTML.index('id="aboutNav"'), HTML.index('id="worksNav"'))

@@ -91,6 +91,21 @@ def init_db() -> None:
             "INSERT INTO colors(name, stock, is_black) SELECT ?, 0, 0 "
             "WHERE NOT EXISTS(SELECT 1 FROM colors WHERE name=?)", (name, name)
         )
+    # Rename in place to keep inventory quantities and foreign order IDs.
+    old = conn.execute("SELECT id,stock,incoming FROM colors WHERE name=?",
+                       ("Лиловый марбл",)).fetchone()
+    if old:
+        current = conn.execute("SELECT id FROM colors WHERE name=?",
+                               ("Розовый марбл",)).fetchone()
+        if current:
+            # Rare duplicate-safe case: transfer any remaining stock exactly
+            # once; the old row stays available only for historical orders.
+            conn.execute("UPDATE colors SET stock=stock+?, incoming=MAX(incoming,?) WHERE id=?",
+                         (old["stock"], old["incoming"], current["id"]))
+            conn.execute("UPDATE colors SET stock=0,incoming=0 WHERE id=?", (old["id"],))
+        else:
+            conn.execute("UPDATE colors SET name=? WHERE id=?",
+                         ("Розовый марбл", old["id"]))
     # Supplier catalogue: new colours are visible in Mini App but not orderable.
     # Never overwrite existing stock: current warehouse quantities remain intact.
     for name, _, _ in colours.COLOURS:
