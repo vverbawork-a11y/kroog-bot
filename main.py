@@ -103,6 +103,13 @@ async def main() -> None:
     notifier = None
     try:
         if MINIAPP_URL:
+            try:
+                from vinyl_previews import generate
+                generate(shop.APP / "assets" / "supplier",
+                         shop.APP / "assets" / "previews")
+            except Exception:
+                # Keep the shop running even if optional photo preparation fails.
+                logging.exception("KROOG vinyl preview preparation failed")
             shop.setup()
             runner = web.AppRunner(shop.application())
             await runner.setup()
