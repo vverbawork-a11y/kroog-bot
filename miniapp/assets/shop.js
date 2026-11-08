@@ -77,7 +77,7 @@ async function load() {
   if (!$("contact").value) $("contact").value = catalog.contact;
   $("sleevePrice").textContent = "+"+money(catalog.sleeve)+" за экземпляр";
   $("labelPrice").textContent = "Две стороны · +"+money(catalog.label)+" за экземпляр";
-  $("rushPrice").textContent = "+"+catalog.rush+"% · срок согласует менеджер";
+  $("rushPrice").textContent = "+"+catalog.rush+"% · приоритет в очереди";
   const available = catalog.colors.filter(c=>c.stock>0);
   $("colors").replaceChildren();
   function makeTile(c, isAvailable) {
