@@ -114,3 +114,61 @@ body[data-panel="inquiry"] #ambientBg,body[data-panel="receipt"] #ambientBg{opac
 @media(prefers-reduced-motion:reduce){
  body,#ambientBg{transition:none}
 }
+
+
+/* Editorial layout: no stacked rounded panels. 2026-11-08 */
+#about{padding:0 0 56px;background:transparent;border:0}
+#about h1{margin:12px 12px 23px}
+#about .about-photo{margin:0 0 29px;border-radius:3px;overflow:hidden;background:transparent}
+#about .about-photo img{width:100%;height:auto;max-height:460px;object-fit:cover}
+#about .about-copy{padding:0 12px;position:relative;isolation:isolate}
+#about .about-copy::before{
+  content:"";position:absolute;z-index:-1;pointer-events:none;
+  left:-5%;right:-1%;top:1.2em;height:30%;
+  background:radial-gradient(ellipse at 40% 48%,rgba(218,211,255,.8),rgba(218,211,255,.33) 58%,transparent 77%);
+  border-radius:63% 38% 59% 34% / 32% 58% 40% 61%;
+  filter:blur(12px);transform:rotate(-2deg);
+}
+#about .about-copy>p{
+  position:relative;
+  padding:0!important;margin:0 0 26px!important;
+  border:0!important;border-radius:0!important;background:transparent!important;
+  font-size:inherit;line-height:1.42;
+}
+#about .about-copy>h2{
+  margin:34px 0 14px;padding:0;font-size:24px;
+}
+#about .about-copy>.links{
+  margin:0 0 30px;padding:0;display:flex;gap:18px 22px;
+}
+#about .about-copy>.links a{text-underline-offset:4px}
+#works{background:transparent!important;padding:0 0 40px}
+#works h1{margin:14px 10px 28px}
+#works .works-scene{
+  position:relative;display:flex;min-height:340px;overflow:visible;
+  align-items:flex-start;justify-content:flex-start;padding:30px 14px;
+  background:transparent;border:0;border-radius:0;isolation:isolate;
+}
+#works .works-scene::before{
+  content:"";position:absolute;z-index:-1;inset:12px -5% 12px -3%;
+  background:linear-gradient(140deg,rgba(218,211,255,.75),rgba(252,250,245,.5) 65%,rgba(252,62,9,.14));
+  clip-path:polygon(3% 8%,30% 2%,53% 5%,79% 0,98% 11%,94% 34%,99% 55%,91% 89%,68% 96%,31% 92%,6% 100%,0 72%,5% 45%);
+  transform:rotate(-1deg);
+}
+#works .works-scene h2{
+  max-width:65%;font-size:clamp(24px,6vw,34px);line-height:1.15;
+  margin:0;position:relative;z-index:2;
+}
+#works .works-scene .works-mascot{
+  width:min(45%,200px);height:auto;right:2%;bottom:15px;
+  object-fit:contain;image-rendering:auto;filter:none;opacity:1;
+}
+@media(max-width:480px){
+  #about .about-copy{padding-inline:12px}
+  #works .works-scene{min-height:320px}
+  #works .works-scene h2{max-width:60%;font-size:23px}
+  #works .works-scene .works-mascot{width:43%;right:-1%}
+}
+@media(prefers-reduced-motion:reduce){
+  #about .about-copy::before,#works .works-scene::before{transform:none}
+}
