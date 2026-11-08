@@ -3,17 +3,20 @@
 Держим их отдельно, чтобы main.py не разрастался.
 """
 
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from config import CHANNEL_URL, MANAGER_USERNAME
+from config import CHANNEL_URL, MANAGER_USERNAME, MINIAPP_URL
 
 
 def main_menu() -> InlineKeyboardMarkup:
     """Главное меню KROOG."""
     builder = InlineKeyboardBuilder()
     # Каждая кнопка: текст для человека + callback_data (скрытая метка для бота)
-    builder.button(text="🎶 Заказать пластинку", callback_data="menu_order")
+    if MINIAPP_URL:
+        builder.button(text="Заказать пластинку", web_app=WebAppInfo(url=MINIAPP_URL))
+    else:
+        builder.button(text="🎶 Заказать пластинку", callback_data="menu_order")
     builder.button(text="ℹ️ О нас", callback_data="menu_about")
     builder.button(text="🛠 Техрекомендации", callback_data="menu_tech")
     # Связь с менеджером (перед Instagram):

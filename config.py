@@ -26,3 +26,9 @@ ADMIN_ID = int(os.getenv("ADMIN_ID") or _from_local("ADMIN_ID", 0))
 MANAGER_USERNAME = os.getenv("MANAGER_USERNAME") or _from_local("MANAGER_USERNAME", "")
 # Ссылка-приглашение на Telegram-канал (личная, поэтому через окружение, не в коде)
 CHANNEL_URL = os.getenv("CHANNEL_URL") or _from_local("CHANNEL_URL", "")
+
+# Bothost supplies DOMAIN when the HTTPS endpoint is enabled.
+_domain = os.getenv("DOMAIN", "").strip().rstrip("/")
+MINIAPP_URL = os.getenv("MINIAPP_URL", "").rstrip("/") or (
+    _domain if _domain.startswith("https://") else f"https://{_domain}" if _domain else ""
+)

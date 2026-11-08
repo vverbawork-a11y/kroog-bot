@@ -395,7 +395,9 @@ async def confirm_order(callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer()
         return
 
-    database.decrease_stock(data["color_id"], data["quantity"])
+    if not database.decrease_stock(data["color_id"], data["quantity"]):
+        await callback.answer("Остаток изменился. Выберите цвет заново.", show_alert=True)
+        return
     await send_application_to_admin(callback, data)
 
     await callback.message.edit_text(
