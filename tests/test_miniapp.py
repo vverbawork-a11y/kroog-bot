@@ -247,8 +247,8 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         for image in photos:
             with self.subTest(image=image.name):
                 data=image.read_bytes()
-                self.assertTrue(data.startswith(b"\\xff\\xd8"), image.name)
-                self.assertTrue(data.endswith(b"\\xff\\xd9"), image.name)
+                self.assertTrue(data.startswith(b"\xff\xd8"), image.name)
+                self.assertTrue(data.endswith(b"\xff\xd9"), image.name)
                 self.assertGreater(len(data),30000)
 
     async def test_clean_ui_and_form_position(self):
