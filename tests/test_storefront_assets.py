@@ -22,8 +22,8 @@ class KROOGStorefrontTests(unittest.TestCase):
             with self.subTest(photo=photo.name):
                 data = photo.read_bytes()
                 self.assertGreaterEqual(len(data), 35000)
-                self.assertTrue(data.startswith(b"\\xff\\xd8\\xff"))
-                self.assertTrue(data.endswith(b"\\xff\\xd9"))
+                self.assertTrue(data.startswith(bytes.fromhex("ffd8ff")))
+                self.assertTrue(data.endswith(bytes.fromhex("ffd9")))
         self.assertEqual(
             sorted(idx for _, _, idx in colours.COLOURS), list(range(32)
         ))
