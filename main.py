@@ -11,6 +11,7 @@ from contextlib import suppress
 from aiohttp import web
 from aiogram.types import MenuButtonWebApp, WebAppInfo
 import shop
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.client.default import DefaultBotProperties
@@ -106,8 +107,13 @@ async def main() -> None:
             runner = web.AppRunner(shop.application())
             await runner.setup()
             await web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", "3000"))).start()
+            # Versioned Telegram menu URL invalidates WebView navigation cache.
+            url_parts = urlsplit(MINIAPP_URL)
+            query = dict(parse_qsl(url_parts.query, keep_blank_values=True))
+            query["kroog_version"] = shop.RELEASE
+            fresh_url = urlunsplit(url_parts._replace(query=urlencode(query)))
             await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(
-                text="Заказать", web_app=WebAppInfo(url=MINIAPP_URL)))
+                text="Заказать", web_app=WebAppInfo(url=fresh_url)))
             notifier = asyncio.create_task(shop.notify_orders(bot))
         await setup_bot_profile(bot)
         await dp.start_polling(bot, close_bot_session=False)

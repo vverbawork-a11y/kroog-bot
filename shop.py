@@ -21,6 +21,7 @@ import database
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
+RELEASE = "2026-11-08-11"
 
 
 def setup():
@@ -356,8 +357,18 @@ async def notify_orders(bot):
 def application():
     app = web.Application(client_max_size=90 * 1024 * 1024)
     async def home(request):
-        return web.FileResponse(APP / "index.html")
+        # Telegram WebView and proxy caches must not keep obsolete app HTML.
+        return web.FileResponse(APP / "index.html", headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        })
+    async def release(request):
+        return web.json_response({"release": RELEASE}, headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+        })
     app.router.add_get("/", home)
+    app.router.add_get("/api/release", release)
     app.router.add_get("/api/catalog", catalog)
     app.router.add_post("/api/orders", place)
     app.router.add_post("/api/inquiries", inquiry)
