@@ -257,18 +257,27 @@ body[data-panel="inquiry"] #ambientBg,body[data-panel="receipt"] #ambientBg{opac
 #colors .tile-media.has-vinyl-photo{
   background-color:#f5f2f0!important;
   background-repeat:no-repeat!important;
-  background-size:136% auto!important;
-  background-position:center 53%!important;
+  /* Use 115% instead of 136%: keep the complete disc inside the frame
+     on desktop and mobile while preserving the original high-res JPEG. */
+  background-size:115% 115%!important;
+  background-position:50% 50%!important;
 }
 #colors .tile-media.has-vinyl-photo .vinyl-photo{
   position:absolute!important;width:1px!important;height:1px!important;
   padding:0!important;margin:0!important;border:0!important;
   clip-path:inset(50%)!important;overflow:hidden!important;
 }
-/* Some supplier discs are photographed slightly lower in the source frame. */
-#colors .tile-media.has-vinyl-photo[data-atlas="5"],
+/* Supplier frames where the photo sits low: move the IMAGE up, never
+   the card or caption. Original disc stays entirely within the square. */
 #colors .tile-media.has-vinyl-photo[data-atlas="7"],
 #colors .tile-media.has-vinyl-photo[data-atlas="8"],
-#colors .tile-media.has-vinyl-photo[data-atlas="29"]{
-  background-position:center 60%!important;
+#colors .tile-media.has-vinyl-photo[data-atlas="10"],
+#colors .tile-media.has-vinyl-photo[data-atlas="21"],
+#colors .tile-media.has-vinyl-photo[data-atlas="22"],
+#colors .tile-media.has-vinyl-photo[data-atlas="24"] {
+  background-position:50% 85%!important;
+}
+/* Blue clear has a different margin in its original supplier photo. */
+#colors .tile-media.has-vinyl-photo[data-atlas="29"] {
+  background-position:50% 69%!important;
 }
