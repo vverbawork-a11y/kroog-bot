@@ -8,7 +8,7 @@ import time
 import uuid
 from contextlib import closing
 from pathlib import Path
-from urllib.parse import parse_qsl, quote
+from urllib.parse import parse_qsl, quote, urlsplit
 
 from aiohttp import web
 
@@ -138,6 +138,29 @@ async def place(request):
         contact = data.get("contact")
         if not isinstance(contact, str) or not 2 <= len(contact.strip()) <= 120:
             raise web.HTTPBadRequest(text="Укажите контакт для менеджера.")
+        # Music plan is optional for compatibility with existing orders.
+        rpm = data.get("rpm", 33)
+        if type(rpm) is not int or rpm not in (33, 45):
+            raise web.HTTPBadRequest(text="Выберите скорость 33⅓ или 45 RPM.")
+        tracklists = {}
+        for side in ("a", "b"):
+            raw = data.get("tracks_" + side, "")
+            if not isinstance(raw, str) or len(raw) > 1000:
+                raise web.HTTPBadRequest(text="Слишком длинный треклист.")
+            lines = [line.strip() for line in raw.splitlines() if line.strip()]
+            if len(lines) > 30:
+                raise web.HTTPBadRequest(text="Не больше 30 треков на сторону.")
+            tracklists[side] = [
+                f"{side.upper()}{i+1} — {line}" for i, line in enumerate(lines)
+            ]
+        audio_link = data.get("audio_link", "")
+        if not isinstance(audio_link, str) or len(audio_link) > 800:
+            raise web.HTTPBadRequest(text="Некорректная ссылка на аудио.")
+        audio_link = audio_link.strip()
+        if audio_link:
+            parsed = urlsplit(audio_link)
+            if parsed.scheme != "https" or not parsed.hostname:
+                raise web.HTTPBadRequest(text="Ссылка на аудио должна начинаться с https://")
         try:
             request_id = str(uuid.UUID(str(data.get("request_id"))))
         except (ValueError, TypeError):
@@ -163,7 +186,8 @@ async def place(request):
                     color=color["name"], contact=contact.strip(), user_id=user["id"],
                     name=" ".join(filter(None, (user.get("first_name"), user.get("last_name")))),
                     sleeve=data["sleeve"], label=data["label"], rush=data["rush"],
-                    files=files, **totals
+                    files=files, rpm=rpm, tracklist_a=tracklists["a"],
+                    tracklist_b=tracklists["b"], audio_link=audio_link, **totals
                 )
                 db.execute("UPDATE colors SET stock=stock-? WHERE id=?", (qty, color_id))
                 order = db.execute(
@@ -287,6 +311,13 @@ async def notify_orders(bot):
             message = (f"Заказ №{ref}\n{o['color']} × {o['quantity']}\n{options}\n"
                        f"Итого {o['total']} ₽\n{o['name']} · {o['contact']}")
             message += f"\nМакеты прикреплены: {len(o.get('files', {}))}" if o["sleeve"] or o["label"] else ""
+            message += f"\nСкорость: {o.get('rpm', 33)} RPM"
+            for side in ("a", "b"):
+                tracks = o.get("tracklist_" + side) or []
+                if tracks:
+                    message += "\n" + side.upper() + ": " + "; ".join(tracks)[:600]
+            if o.get("audio_link"):
+                message += "\nАудио: " + o["audio_link"][:800]
             link = WebAppInfo(url=f"{config.MINIAPP_URL}/?order={ref}")
             try:
                 await bot.send_message(config.ADMIN_ID, message, parse_mode=None,

@@ -30,11 +30,14 @@ class KROOGStorefrontTests(unittest.TestCase):
 
     def test_order_form_replaces_colour_gallery_without_scrolling_below_stock(self):
         self.assertLess(HTML.index('id="colors"'), HTML.index('id="form"'))
-        self.assertLess(HTML.index('id="form"'), HTML.index('id="incomingSection"'))
-        self.assertLess(HTML.index('id="form"'), HTML.index('id="unavailableSection"'))
+        self.assertNotIn('id="incomingSection"', HTML)
+        self.assertNotIn('id="unavailableSection"', HTML)
+        self.assertIn('id="audioSetup"', HTML)
+        self.assertIn('id="rpmTime"', HTML)
+        self.assertIn('id="tracksA"', HTML)
+        self.assertIn('id="tracksB"', HTML)
         self.assertIn('id="stockHint"', HTML)
-        self.assertIn('$("incomingSection").hidden=!choosing', JS)
-        self.assertIn('$("unavailableSection").hidden=!choosing', JS)
+        self.assertIn('for (const c of catalog.colors) $("colors").append', JS)
         self.assertIn('$("stockHint").hidden=!choosing', JS)
         self.assertIn('getBoundingClientRect().top', JS)
 
@@ -42,6 +45,7 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn('/assets/supplier/', JS)
         self.assertNotIn('colours-atlas.webp', JS)
         self.assertNotIn('backgroundSize="400%', JS)
+        self.assertIn('transform:scale(1.29)!important', CSS)
         self.assertIn('object-fit:cover', CSS)
         self.assertIn('object-position:center center', CSS)
         self.assertNotIn('filter:brightness(.65)', CSS)

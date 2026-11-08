@@ -56,8 +56,6 @@ function choose(c, fromClick=false) {
   $("colors").hidden=!choosing;
   $("colorHeading").hidden=!choosing;
   $("stockHint").hidden=!choosing;
-  $("incomingSection").hidden=!choosing || !(catalog?.colors.some(x=>x.stock===0 && x.incoming));
-  $("unavailableSection").hidden=!choosing || !(catalog?.colors.some(x=>x.stock===0 && !x.incoming));
   color = c;
   for (const b of $("colors").children) b.setAttribute("aria-pressed",String(Number(b.dataset.id)===c.id));
   $("qty").max = c.stock;
@@ -81,13 +79,7 @@ async function load() {
   $("labelPrice").textContent = "Две стороны · +"+money(catalog.label)+" за экземпляр";
   $("rushPrice").textContent = "+"+catalog.rush+"% · срок согласует менеджер";
   const available = catalog.colors.filter(c=>c.stock>0);
-  const incoming = catalog.colors.filter(c=>c.stock<=0 && Boolean(c.incoming));
-  const unavailable = catalog.colors.filter(c=>c.stock<=0 && !c.incoming);
   $("colors").replaceChildren();
-  $("incomingColors").replaceChildren();
-  $("unavailableColors").replaceChildren();
-  $("unavailableSection").hidden = unavailable.length === 0;
-  $("incomingSection").hidden = incoming.length === 0;
   function makeTile(c, isAvailable) {
     const tile = button("",()=>isAvailable ? choose(c,true) : showInquiry(c));
     tile.className = isAvailable ? "tile" : (c.incoming ? "tile tile-incoming" : "tile tile-unavailable");
@@ -98,6 +90,7 @@ async function load() {
       // Original JPG bytes supplied by the vendor: no low-res atlas, resampling
       // or background-position cropping.
       pic.src="/assets/supplier/"+String(c.atlas).padStart(2,"0")+".jpg";
+      pic.className="vinyl-photo";
       pic.alt=c.name;
       pic.loading="lazy";
       pic.decoding="async";
@@ -105,7 +98,7 @@ async function load() {
       pic.height=800;
     } else if (c.photo) {
       pic=document.createElement("img");
-      pic.src=c.photo;pic.alt=c.name;pic.loading="lazy";
+      pic.src=c.photo;pic.alt=c.name;pic.loading="lazy";pic.className="vinyl-photo";
     } else {
       pic=document.createElement("span");
       pic.className="stock-empty";
@@ -127,13 +120,12 @@ async function load() {
     caption.className="caption";title.textContent=c.name;
     info.textContent=isAvailable
       ? "Доступно: "+c.stock+" шт. · от "+money(c.price)
-      : "От "+money(c.price)+" · "+(c.incoming ? "В пути · сообщить о поступлении" : "Узнать о поступлении");
+      : "От "+money(c.price)+" · "+(c.incoming ? "Скоро в наличии" : "Нет в наличии");
     caption.append(title,info);tile.append(media,caption);
     return tile;
   }
-  for (const c of available) $("colors").append(makeTile(c,true));
-  for (const c of incoming) $("incomingColors").append(makeTile(c,false));
-  for (const c of unavailable) $("unavailableColors").append(makeTile(c,false));
+  // One continuous gallery: in stock, on the way, unavailable.
+  for (const c of catalog.colors) $("colors").append(makeTile(c,c.stock>0));
   if (available.length) {
     const existing=available.find(c=>c.id===color?.id)||available[0];
     choose(existing);
@@ -141,7 +133,10 @@ async function load() {
   else {
     color=null;choosing=true;
     $("colors").hidden=false;$("colorHeading").hidden=false;$("form").hidden=true;
-    $("colors").textContent="Сейчас заготовок в наличии нет. Ниже можно выбрать цвет под заказ.";
+    $("stockHint").hidden=false;
+    $("colors").hidden=false;
+    // All unavailable colours remain visible and can be requested.
+
   }
   if (catalog.admin) renderStock();
 }
@@ -236,7 +231,24 @@ for (const [key] of ARTWORK) {
     syncArtwork();
   });
 }
-$("form").oninput=()=>{requestId=null;prices();syncArtwork();};
+// Order music configuration. Tracks are saved as an ordered list for the manager.
+function musicGuide() {
+  const rpm = document.querySelector('input[name="rpm"]:checked')?.value || "33";
+  $("rpmTime").textContent = rpm === "45"
+    ? "Ориентировочно до 15 минут на сторону при 45 RPM."
+    : "Ориентировочно до 21 минуты на сторону при 33⅓ RPM.";
+  for (const side of ["A","B"]) {
+    const lines = $(side === "A" ? "tracksA" : "tracksB").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    $(side === "A" ? "trackCountA" : "trackCountB").textContent = lines.length
+      ? lines.map((_,i)=>side+(i+1)).join(", ")+" · "+lines.length+" тр."
+      : "Номера "+side+"1, "+side+"2… проставятся автоматически.";
+  }
+}
+for (const radio of document.querySelectorAll('input[name="rpm"]')) radio.addEventListener("change",musicGuide);
+for (const field of ["tracksA","tracksB"]) $(field).addEventListener("input",musicGuide);
+musicGuide();
+
+$("form").oninput=()=>{requestId=null;prices();syncArtwork();musicGuide();};
 syncArtwork();
 $("minus").onclick=()=>{$("qty").stepDown();requestId=null;prices();};
 $("plus").onclick=()=>{$("qty").stepUp();requestId=null;prices();};
@@ -246,7 +258,10 @@ $("form").onsubmit=async e=>{
   try {
     const payload = {color:color.id,quantity:$("qty").valueAsNumber,
       sleeve:$("sleeve").checked,label:$("label").checked,rush:$("rush").checked,
-      contact:$("contact").value,request_id:requestId};
+      contact:$("contact").value,request_id:requestId,
+      rpm:Number(document.querySelector('input[name="rpm"]:checked')?.value||33),
+      tracks_a:$("tracksA").value,tracks_b:$("tracksB").value,
+      audio_link:$("audioLink").value.trim()};
     const formData = new FormData();
     formData.append("payload", JSON.stringify(payload));
     for (const [key,option] of ARTWORK) {
@@ -256,7 +271,7 @@ $("form").onsubmit=async e=>{
     const result=await api("orders",formData);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
     $("receiptText").textContent="Заявка принята. Менеджер свяжется с тобой по указанному контакту.";
-    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();syncArtwork();
+    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();syncArtwork();musicGuide();
   } catch(error) {await load().catch(()=>{});$("status").textContent=error.message;}
   finally {busy=false;$("submit").disabled=false;}
 };
@@ -265,7 +280,12 @@ async function detail(id) {
   display("receipt");$("receiptTitle").textContent="Заказ №"+o.id;
   const opts=[o.sleeve&&"цветной конверт",o.label&&"цветное яблоко",o.rush&&"срочно"].filter(Boolean).join(", ");
   $("receiptText").textContent=[o.cancelled?"Отменён":"Принят",o.color+" × "+o.quantity,opts||"Без доплат",
-    "Итого "+money(o.total),o.name,o.contact,"Telegram ID "+o.user_id].join("\n");
+    "Итого "+money(o.total),
+    "Скорость: "+(o.rpm||33)+" RPM",
+    (o.tracklist_a?.length ? "A: "+o.tracklist_a.join("; ") : "A: треклист позже"),
+    (o.tracklist_b?.length ? "B: "+o.tracklist_b.join("; ") : "B: треклист позже"),
+    ...(o.audio_link ? ["Аудио: "+o.audio_link] : []),
+    o.name,o.contact,"Telegram ID "+o.user_id].join("\n");
   $("receiptFiles").replaceChildren();
   for (const [key,entry] of Object.entries(o.files || {})) {
     if (!ARTWORK_NAMES[key] || !entry?.name) continue;
