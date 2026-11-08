@@ -66,6 +66,17 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
                                filename=key + ".jpg", content_type="image/jpeg")
         return await self.client.post("/api/orders", data=form, headers=self.headers(43))
 
+    async def test_live_version_endpoint_and_uncached_index(self):
+        response = await self.client.get("/")
+        self.assertEqual(response.status, 200)
+        self.assertIn("no-store", response.headers.get("Cache-Control", ""))
+        html = await response.text()
+        self.assertIn('name="kroog-release" content="'+shop.RELEASE+'"', html)
+        release = await self.client.get("/api/release")
+        self.assertEqual(release.status, 200)
+        self.assertEqual((await release.json())["release"], shop.RELEASE)
+        self.assertIn("no-store", release.headers.get("Cache-Control", ""))
+
     async def test_artwork_order_is_saved_and_private(self):
         response = await self.submit(self.params())
         self.assertEqual(response.status, 201, await response.text())
