@@ -33,13 +33,15 @@ def calculate(
     print_envelope: bool,
     print_label: bool,
     urgent: bool = False,
+    unit_price_override: int | None = None,
 ) -> dict:
     """
     Считает цену заказа и возвращает подробную разбивку (словарь),
     чтобы потом красиво показать пользователю.
     """
     # Цена одной пластинки + выбранная печать
-    unit_price = PRICE_BLACK if is_black else PRICE_COLOR
+    unit_price = (unit_price_override if unit_price_override is not None
+                  else PRICE_BLACK if is_black else PRICE_COLOR)
     per_piece = unit_price
     if print_envelope:
         per_piece += PRICE_ENVELOPE
