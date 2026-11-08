@@ -14,6 +14,7 @@ from aiohttp import web
 
 import artwork
 import calculator as prices
+import colours
 import config
 import database
 
@@ -29,6 +30,12 @@ def setup():
             color_id INTEGER NOT NULL, quantity INTEGER NOT NULL, details TEXT NOT NULL,
             cancelled INTEGER NOT NULL DEFAULT 0, notified INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, request_id))""")
+        db.execute("""CREATE TABLE IF NOT EXISTS shop_inquiries (
+            id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL, color_id INTEGER NOT NULL,
+            contact TEXT NOT NULL, request_id TEXT NOT NULL,
+            notified INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, request_id))""")
 
 
 def identity(request):
@@ -67,12 +74,25 @@ def photo(name):
 async def catalog(request):
     user = identity(request)
     owner = user["id"] == config.ADMIN_ID
-    rows = database.get_all_colors() if owner else database.get_available_colors()
+    rows = database.get_all_colors()
+    products = []
+    for row in rows:
+        name = row["name"]
+        standard = name in colours.BY_NAME
+        # Older colours stay available if present, but unknown old zero-stock
+        # placeholder entries do not clutter the supplier catalogue.
+        if not standard and not (owner or row["stock"] > 0):
+            continue
+        meta = colours.record(name, bool(row["is_black"]))
+        products.append(dict(
+            row, photo=photo(name) if meta["atlas"] is None else None,
+            atlas=meta["atlas"], price=meta["price"]
+        ))
+    products.sort(key=lambda row: (row["stock"] <= 0, row["id"]))
     return web.json_response({
         "admin": owner, "channel": config.CHANNEL_URL,
         "contact": "@"+user["username"] if user.get("username") else "",
-        "colors": [dict(row, photo=photo(row["name"]),
-                        price=prices.PRICE_BLACK if row["is_black"] else prices.PRICE_COLOR) for row in rows],
+        "colors": products,
         "sleeve": prices.PRICE_ENVELOPE, "label": prices.PRICE_LABEL,
         "rush": prices.URGENT_SURCHARGE_PERCENT,
         "discounts": [[n, prices.discount_percent(n)] for n in (50,25,10,5)]
@@ -132,7 +152,10 @@ async def place(request):
                 color = db.execute("SELECT * FROM colors WHERE id=?", (color_id,)).fetchone()
                 if not color or color["stock"] < qty:
                     raise web.HTTPConflict(text="Остаток изменился. Выберите доступное количество.")
-                totals = prices.calculate(color["is_black"], qty, data["sleeve"], data["label"], data["rush"])
+                totals = prices.calculate(
+            color["is_black"], qty, data["sleeve"], data["label"], data["rush"],
+            unit_price_override=colours.record(color["name"], bool(color["is_black"]))["price"]
+        )
                 details = dict(
                     color=color["name"], contact=contact.strip(), user_id=user["id"],
                     name=" ".join(filter(None, (user.get("first_name"), user.get("last_name")))),
@@ -155,6 +178,43 @@ async def place(request):
         artwork.discard(stage)
         if not committed and saved:
             artwork.discard(saved)
+
+
+async def inquiry(request):
+    """Interest in unavailable colours: no stock reservation or payment."""
+    user = identity(request)
+    data = await payload(request)
+    color_id = number(data, "color", 1)
+    contact = data.get("contact")
+    if not isinstance(contact, str) or not 2 <= len(contact.strip()) <= 120:
+        raise web.HTTPBadRequest(text="Оставьте контакт, чтобы ответить о наличии.")
+    try:
+        request_id = str(uuid.UUID(str(data.get("request_id"))))
+    except (ValueError, TypeError):
+        raise web.HTTPBadRequest(text="Откройте форму заново.")
+    with closing(database.get_connection()) as db:
+        db.execute("BEGIN IMMEDIATE")
+        existing = db.execute(
+            "SELECT id FROM shop_inquiries WHERE user_id=? AND request_id=?",
+            (user["id"], request_id)).fetchone()
+        if existing:
+            return web.json_response({"id": existing["id"]})
+        color = db.execute("SELECT * FROM colors WHERE id=?", (color_id,)).fetchone()
+        if not color:
+            raise web.HTTPNotFound(text="Такого цвета нет в каталоге.")
+        if color["stock"] > 0:
+            raise web.HTTPConflict(text="Цвет появился в наличии — можно оформить заказ.")
+        count = db.execute(
+            "SELECT COUNT(*) FROM shop_inquiries WHERE user_id=? "
+            "AND created_at > datetime('now', '-1 day')", (user["id"],)
+        ).fetchone()[0]
+        if count >= 5:
+            raise web.HTTPTooManyRequests(text="Слишком много запросов за день. Напиши менеджеру напрямую.")
+        result = db.execute(
+            "INSERT INTO shop_inquiries(user_id,color_id,contact,request_id) VALUES(?,?,?,?)",
+            (user["id"], color_id, contact.strip(), request_id)
+        )
+    return web.json_response({"id": result.lastrowid}, status=201)
 
 
 async def stock(request):
@@ -221,6 +281,29 @@ async def notify_orders(bot):
                 break
             with closing(database.get_connection()) as db, db:
                 db.execute("UPDATE shop_orders SET notified=1 WHERE id=?", (ref,))
+        with closing(database.get_connection()) as db:
+            requests = db.execute(
+                "SELECT q.id, q.user_id, q.contact, c.name FROM shop_inquiries q "
+                "JOIN colors c ON c.id=q.color_id "
+                "WHERE q.notified=0 ORDER BY q.id LIMIT 20"
+            ).fetchall()
+        for inquiry_row in requests:
+            try:
+                await bot.send_message(
+                    config.ADMIN_ID,
+                    f"Запрос цвета №{inquiry_row['id']}\n"
+                    f"Хочу: {inquiry_row['name']} (сейчас нет в наличии)\n"
+                    f"Telegram ID: {inquiry_row['user_id']}\n"
+                    f"Контакт: {inquiry_row['contact']}",
+                    parse_mode=None
+                )
+            except Exception as exc:
+                logging.warning("Colour inquiry %s pending (%s)",
+                                inquiry_row["id"], type(exc).__name__)
+                break
+            with closing(database.get_connection()) as db, db:
+                db.execute("UPDATE shop_inquiries SET notified=1 WHERE id=?",
+                           (inquiry_row["id"],))
         await asyncio.sleep(5)
 
 
@@ -231,6 +314,7 @@ def application():
     app.router.add_get("/", home)
     app.router.add_get("/api/catalog", catalog)
     app.router.add_post("/api/orders", place)
+    app.router.add_post("/api/inquiries", inquiry)
     app.router.add_post("/api/stock", stock)
     app.router.add_get(r"/api/orders/{id:\d+}", manager_order)
     app.router.add_post(r"/api/orders/{id:\d+}/cancel", manager_order)
