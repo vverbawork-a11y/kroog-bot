@@ -239,5 +239,35 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(database.get_color(row["id"])["incoming"],0)
 
 
+    async def test_original_supplied_photos_are_present(self):
+        from pathlib import Path
+        base=Path(__file__).resolve().parents[1]/"miniapp"/"assets"/"supplier"
+        photos=sorted(base.glob("*.jpg"))
+        self.assertEqual(len(photos),32)
+        for image in photos:
+            with self.subTest(image=image.name):
+                data=image.read_bytes()
+                self.assertTrue(data.startswith(b"\\xff\\xd8"), image.name)
+                self.assertTrue(data.endswith(b"\\xff\\xd9"), image.name)
+                self.assertGreater(len(data),30000)
+
+    async def test_clean_ui_and_form_position(self):
+        from pathlib import Path
+        base=Path(__file__).resolve().parents[1]/"miniapp"
+        page=(base/"index.html").read_text(encoding="utf-8")
+        script=(base/"assets"/"shop.js").read_text(encoding="utf-8")
+        self.assertLess(page.index('id="aboutNav"'),page.index('id="worksNav"'))
+        self.assertLess(page.index('id="form"'),page.index('id="incomingSection"'))
+        self.assertNotIn("brand-mascot",page)
+        self.assertNotIn("brand-hero",page)
+        self.assertNotIn("Твоя пластинка</h1>",page)
+        self.assertNotIn(" ↗",page)
+        self.assertIn("/assets/supplier/",script)
+        self.assertNotIn("backgroundSize",script)
+        self.assertIn('id="ambientBg"',page)
+        self.assertTrue((base/"assets"/"white-violet-lines-hq.mp4").exists())
+        self.assertTrue((base/"assets"/"white-violet-bg.png").exists())
+
+
 if __name__ == "__main__":
     unittest.main()
