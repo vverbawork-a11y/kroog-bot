@@ -45,7 +45,6 @@ BY_NAME = {name: {"price": price, "atlas": atlas}
 
 # Some earlier workshop colours have no match in the supplier ZIP.
 LEGACY = {
-    "Русалка": {"price": 5500, "atlas": None},
     "Фиолетовый дымчатый": {"price": 5500, "atlas": None},
     "Голубой": {"price": 5500, "atlas": None},
 }
