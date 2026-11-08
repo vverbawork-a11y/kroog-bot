@@ -23,7 +23,7 @@ import database
 import order
 import texts
 from config import BOT_TOKEN, MINIAPP_URL
-from keyboards import back_to_menu, main_menu
+from keyboards import back_to_menu
 
 logging.basicConfig(level=logging.INFO)
 dp = Dispatcher()
@@ -35,15 +35,15 @@ dp.include_router(order.router)  # подключаем сценарий зак�
 
 @dp.message(CommandStart())
 async def start_handler(message: Message) -> None:
-    """Команда /start — показываем приветствие и меню."""
-    await message.answer(texts.WELCOME, reply_markup=main_menu())
+    """Простое приветствие: заказ открывается через кнопку меню Telegram."""
+    await message.answer(texts.WELCOME)
 
 
 @dp.callback_query(F.data == "menu_main")
 async def back_to_main_handler(callback: CallbackQuery) -> None:
     """Кнопка «В меню» — возвращаемся в главное меню."""
     # edit_text меняет уже отправленное сообщение, а не шлёт новое
-    await callback.message.edit_text(texts.WELCOME, reply_markup=main_menu())
+    await callback.message.edit_text(texts.WELCOME)
     await callback.answer()  # убирает «часики» на кнопке
 
 
@@ -77,7 +77,7 @@ async def setup_bot_profile(bot: Bot) -> None:
     # Команда /start в синем меню рядом с полем ввода. Админские команды
     # сюда НЕ добавляем — чтобы клиенты их не видели (они и так работают).
     await bot.set_my_commands([
-        BotCommand(command="start", description="Открыть меню KROOG"),
+        BotCommand(command="start", description="Как заказать пластинку"),
     ])
     # Короткое описание — в профиле бота
     await bot.set_my_short_description(
@@ -87,7 +87,7 @@ async def setup_bot_profile(bot: Bot) -> None:
     await bot.set_my_description(
         "Привет! Это KROOG 🎶\n"
         "Здесь можно заказать виниловую пластинку 12\" с вашей музыкой.\n\n"
-        "Нажмите «Запустить», чтобы открыть меню."
+        "Нажмите «Запустить», затем «Заказать» слева от поля сообщения."
     )
 
 
