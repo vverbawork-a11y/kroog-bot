@@ -87,9 +87,15 @@ async function load() {
     let pic;
     if (Number.isInteger(c.atlas) && c.atlas>=0 && c.atlas<32) {
       pic=document.createElement("img");
-      // Original JPG bytes supplied by the vendor: no low-res atlas, resampling
-      // or background-position cropping.
-      pic.src="/assets/supplier/"+String(c.atlas).padStart(2,"0")+".jpg";
+      // Original supplier JPG is unchanged. Display the normalized preview.
+      const filename=String(c.atlas).padStart(2,"0")+".jpg";
+      pic.src="/assets/previews/"+filename+"?v=13";
+      pic.addEventListener("error",()=>{
+        if (!pic.dataset.fallback) {
+          pic.dataset.fallback="true";
+          pic.src="/assets/supplier/"+filename;
+        }
+      });
       pic.className="vinyl-photo";
       pic.alt=c.name;
       pic.loading="lazy";
@@ -107,13 +113,7 @@ async function load() {
     }
     const media=document.createElement("span");
     media.className="tile-media";
-    if (pic.tagName === "IMG") {
-      // Render directly as a cropped CSS background to avoid WebKit's replaced-
-      // image sizing gaps at the top of some photos. Original JPEGs remain intact.
-      media.classList.add("has-vinyl-photo");
-      media.style.backgroundImage="url("+JSON.stringify(pic.src)+")";
-      if (Number.isInteger(c.atlas)) media.dataset.atlas=String(c.atlas);
-    }
+    if (pic.tagName === "IMG") media.classList.add("has-vinyl-photo");
     media.append(pic);
     if (!isAvailable) {
       const flag=document.createElement("span");
