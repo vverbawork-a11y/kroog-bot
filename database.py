@@ -73,6 +73,10 @@ def init_db() -> None:
             (emoji, name),
         )
 
+    # Track incoming blanks separately from physical warehouse stock.
+    if "incoming" not in columns:
+        conn.execute("ALTER TABLE colors ADD COLUMN incoming INTEGER NOT NULL DEFAULT 0")
+
     # Если цветов ещё нет — добавляем стартовые
     count = conn.execute("SELECT COUNT(*) FROM colors").fetchone()[0]
     if count == 0:
@@ -94,6 +98,41 @@ def init_db() -> None:
             "INSERT INTO colors(name, stock, is_black) SELECT ?, 0, ? "
             "WHERE NOT EXISTS(SELECT 1 FROM colors WHERE name=?)",
             (name, int(name == "Чёрный"), name)
+        )
+    # Physical inventory confirmed 2026-11-08. Apply exactly once so that
+    # future orders and manual stock adjustments persist across restarts.
+    conn.execute("""CREATE TABLE IF NOT EXISTS applied_inventory_migrations (
+        name TEXT PRIMARY KEY, applied_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
+    version = "physical_stock_2026_11_08"
+    if conn.execute(
+        "SELECT 1 FROM applied_inventory_migrations WHERE name=?", (version,)
+    ).fetchone() is None:
+        on_hand = {
+            "Красный марбл": 10, "Чёрный": 10,
+            "Прозрачный": 10, "Голубой марбл": 10,
+        }
+        incoming = {
+            "Синий прозрачный", "Оранжевый прозрачный",
+            "Зелёный марбл", "Розовый «Барби»",
+            "Фиолетовый марбл", "Ночной переливающийся",
+            "Жёлтый прозрачный", "Красный прозрачный", "Древесный",
+        }
+        # Store actual available quantity only; in-transit is NOT stock.
+        conn.execute("UPDATE colors SET stock=0, incoming=0")
+        for name, quantity in on_hand.items():
+            updated = conn.execute(
+                "UPDATE colors SET stock=? WHERE name=?", (quantity, name)
+            )
+            if updated.rowcount != 1:
+                raise RuntimeError(f"Warehouse colour not found: {name}")
+        for name in incoming:
+            updated = conn.execute(
+                "UPDATE colors SET incoming=1 WHERE name=?", (name,)
+            )
+            if updated.rowcount != 1:
+                raise RuntimeError(f"In-transit colour not found: {name}")
+        conn.execute(
+            "INSERT INTO applied_inventory_migrations(name) VALUES(?)", (version,)
         )
     conn.commit()
     conn.close()
