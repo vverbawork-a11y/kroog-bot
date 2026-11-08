@@ -88,7 +88,10 @@ async def catalog(request):
             row, photo=photo(name) if meta["atlas"] is None else None,
             atlas=meta["atlas"], price=meta["price"]
         ))
-    products.sort(key=lambda row: (row["stock"] <= 0, row["id"]))
+    products.sort(key=lambda row: (
+        0 if row["stock"] > 0 else 1 if row["incoming"] else 2,
+        row["id"]
+    ))
     return web.json_response({
         "admin": owner, "channel": config.CHANNEL_URL,
         "contact": "@"+user["username"] if user.get("username") else "",
@@ -218,14 +221,26 @@ async def inquiry(request):
 
 
 async def stock(request):
+    """Manager can set physical stock and toggle in-transit separately."""
     admin(request)
     data = await payload(request)
+    color_id = number(data, "color", 1)
+    stock_qty = number(data, "stock", 0)
+    old_stock = number(data, "previous", 0)
+    arriving = data.get("incoming", False)
+    old_arriving = data.get("previous_incoming", False)
+    if type(arriving) is not bool or type(old_arriving) is not bool:
+        raise web.HTTPBadRequest(text="Неверный статус поставки.")
+    if stock_qty > 0:
+        arriving = False
     with closing(database.get_connection()) as db, db:
-        result = db.execute("UPDATE colors SET stock=? WHERE id=? AND stock=?",
-                            (number(data,"stock",0), number(data,"color",1), number(data,"previous",0)))
+        result = db.execute(
+            "UPDATE colors SET stock=?, incoming=? WHERE id=? AND stock=? AND incoming=?",
+            (stock_qty, int(arriving), color_id, old_stock, int(old_arriving))
+        )
         if not result.rowcount:
-            raise web.HTTPConflict(text="Остаток уже изменился. Проверьте новое значение.")
-    return web.json_response({"ok":True})
+            raise web.HTTPConflict(text="Остаток или статус уже изменился. Обнови страницу.")
+    return web.json_response({"ok": True})
 
 
 async def manager_order(request):
@@ -283,7 +298,7 @@ async def notify_orders(bot):
                 db.execute("UPDATE shop_orders SET notified=1 WHERE id=?", (ref,))
         with closing(database.get_connection()) as db:
             requests = db.execute(
-                "SELECT q.id, q.user_id, q.contact, c.name FROM shop_inquiries q "
+                "SELECT q.id, q.user_id, q.contact, c.name, c.incoming FROM shop_inquiries q "
                 "JOIN colors c ON c.id=q.color_id "
                 "WHERE q.notified=0 ORDER BY q.id LIMIT 20"
             ).fetchall()
@@ -292,7 +307,7 @@ async def notify_orders(bot):
                 await bot.send_message(
                     config.ADMIN_ID,
                     f"Запрос цвета №{inquiry_row['id']}\n"
-                    f"Хочу: {inquiry_row['name']} (сейчас нет в наличии)\n"
+                    f"Хочу: {inquiry_row['name']} ({'в пути' if inquiry_row['incoming'] else 'нет в наличии'})\n"
                     f"Telegram ID: {inquiry_row['user_id']}\n"
                     f"Контакт: {inquiry_row['contact']}",
                     parse_mode=None
