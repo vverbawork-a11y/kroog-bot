@@ -15,6 +15,7 @@ function startBackground() {
   video.play().catch(()=>{});
 }
 function display(panel) {
+  document.body.dataset.panel=panel;
   for (const name of panels) $(name).hidden = name !== panel;
   for (const [id,name] of [["shopNav","shop"],["aboutNav","about"],["worksNav","works"],["stockNav","inventory"]]) {
     $(id).setAttribute("aria-current",String(name === panel));
