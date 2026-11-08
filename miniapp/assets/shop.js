@@ -2,11 +2,12 @@
 const $ = id => document.getElementById(id);
 const tg = window.Telegram?.WebApp;
 const money = n => n.toLocaleString("ru-RU") + " ₽";
-const panels = ["shop","inventory","about","receipt"];
+const panels = ["shop","inventory","about","receipt","inquiry","works"];
 let catalog, color, requestId, busy = false, choosing = true;
+let interestColor = null, interestRequestId = null;
 function display(panel) {
   for (const name of panels) $(name).hidden = name !== panel;
-  for (const [id,name] of [["shopNav","shop"],["aboutNav","about"],["stockNav","inventory"]]) {
+  for (const [id,name] of [["shopNav","shop"],["aboutNav","about"],["worksNav","works"],["stockNav","inventory"]]) {
     $(id).setAttribute("aria-current",String(name === panel));
   }
   $("status").textContent = "";
@@ -58,22 +59,91 @@ async function load() {
   $("sleevePrice").textContent = "+"+money(catalog.sleeve)+" за экземпляр";
   $("labelPrice").textContent = "Две стороны · +"+money(catalog.label)+" за экземпляр";
   $("rushPrice").textContent = "+"+catalog.rush+"% · срок согласует менеджер";
-  const list = catalog.colors.filter(c=>c.stock>0);
+  const available = catalog.colors.filter(c=>c.stock>0);
+  const unavailable = catalog.colors.filter(c=>c.stock<=0);
   $("colors").replaceChildren();
-  for (const c of list) {
-    const tile = button("",()=>choose(c,true));
-    tile.className="tile"; tile.dataset.id=c.id;
-    const pic=document.createElement(c.photo ? "img":"span");
-    if (c.photo) {pic.src=c.photo;pic.alt=c.name;pic.loading="lazy";}
-    else {pic.className="stock-empty";pic.textContent=c.emoji || "○";pic.setAttribute("aria-label","Фотография пока недоступна");}
-    const caption=document.createElement("span"),title=document.createElement("strong"),info=document.createElement("small");
-    caption.className="caption";title.textContent=c.name;info.textContent="Доступно к заказу: "+c.stock+" шт. · "+money(c.price)+" / пластинка";
-    caption.append(title,info);tile.append(pic,caption);$("colors").append(tile);
+  $("unavailableColors").replaceChildren();
+  $("unavailableSection").hidden = unavailable.length === 0;
+  function makeTile(c, isAvailable) {
+    const tile = button("",()=>isAvailable ? choose(c,true) : showInquiry(c));
+    tile.className = isAvailable ? "tile" : "tile tile-unavailable";
+    tile.dataset.id=c.id;
+    let pic;
+    if (Number.isInteger(c.atlas) && c.atlas>=0 && c.atlas<32) {
+      pic=document.createElement("span");
+      pic.className="atlas-photo";
+      pic.setAttribute("role","img");
+      pic.setAttribute("aria-label","Виниловая пластинка: "+c.name);
+      pic.style.backgroundImage="url('/assets/colours-atlas.webp')";
+      pic.style.backgroundSize="400% 800%";
+      pic.style.backgroundPosition=(c.atlas%4/3*100)+"% "+(Math.floor(c.atlas/4)/7*100)+"%";
+    } else if (c.photo) {
+      pic=document.createElement("img");
+      pic.src=c.photo;pic.alt=c.name;pic.loading="lazy";
+    } else {
+      pic=document.createElement("span");
+      pic.className="stock-empty";
+      pic.textContent=c.emoji || "○";
+      pic.setAttribute("aria-label","Фото пока недоступно");
+    }
+    const media=document.createElement("span");
+    media.className="tile-media";
+    media.append(pic);
+    if (!isAvailable) {
+      const flag=document.createElement("span");
+      flag.className="stock-overlay";
+      flag.textContent="Нет в наличии";
+      media.append(flag);
+    }
+    const caption=document.createElement("span");
+    const title=document.createElement("strong");
+    const info=document.createElement("small");
+    caption.className="caption";title.textContent=c.name;
+    info.textContent=isAvailable
+      ? "Доступно: "+c.stock+" шт. · от "+money(c.price)
+      : "От "+money(c.price)+" · Узнать о поступлении";
+    caption.append(title,info);tile.append(media,caption);
+    return tile;
   }
-  if (list.length) choose(list.find(c=>c.id===color?.id)||list[0]);
-  else {color=null;choosing=true;$("colors").hidden=false;$("colorHeading").hidden=false;$("form").hidden=true;$("colors").textContent="Сейчас заготовок в наличии нет.";}
+  for (const c of available) $("colors").append(makeTile(c,true));
+  for (const c of unavailable) $("unavailableColors").append(makeTile(c,false));
+  if (available.length) choose(available.find(c=>c.id===color?.id)||available[0]);
+  else {
+    color=null;choosing=true;
+    $("colors").hidden=false;$("colorHeading").hidden=false;$("form").hidden=true;
+    $("colors").textContent="Сейчас заготовок в наличии нет. Ниже можно выбрать цвет под заказ.";
+  }
   if (catalog.admin) renderStock();
 }
+function showInquiry(c) {
+  interestColor=c;
+  interestRequestId=null;
+  $("inquiryColor").textContent=c.name+" · от "+money(c.price)+" за пластинку";
+  if (!$("inquiryContact").value) $("inquiryContact").value=catalog?.contact || "";
+  display("inquiry");
+}
+$("inquiryForm").onsubmit=async e=>{
+  e.preventDefault();
+  if(!interestColor || busy) return;
+  busy=true;$("inquirySubmit").disabled=true;
+  interestRequestId ||= crypto.randomUUID();
+  try {
+    const response=await api("inquiries",{
+      color:interestColor.id,contact:$("inquiryContact").value,request_id:interestRequestId
+    });
+    display("receipt");
+    $("receiptTitle").textContent="Запрос №"+response.id;
+    $("receiptText").textContent="Запрос по цвету «"+interestColor.name+
+      "» отправлен. Мы свяжемся с тобой по указанному контакту.";
+    $("receiptFiles").replaceChildren();
+    $("cancelOrder").hidden=true;
+    interestRequestId=null;
+  } catch(error) {$("status").textContent=error.message;}
+  finally {busy=false;$("inquirySubmit").disabled=false;}
+};
+$("inquiryBack").onclick=()=>openShop();
+
+
 function renderStock() {
   $("stocks").replaceChildren();
   for (const c of catalog.colors) {
@@ -179,6 +249,7 @@ async function detail(id) {
 async function openShop(){choosing=true;display("shop");try{await load();}catch(e){$("status").textContent=e.message;}}
 $("changeColor").onclick=openShop;$("shopNav").onclick=openShop;$("back").onclick=openShop;
 $("aboutNav").onclick=()=>display("about");
+$("worksNav").onclick=()=>display("works");
 $("stockNav").onclick=async()=>{display("inventory");try{await load();}catch(e){$("status").textContent=e.message;}};
 async function start(){
   tg?.ready();tg?.expand();display("shop");
