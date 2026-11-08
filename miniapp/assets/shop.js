@@ -140,7 +140,7 @@ $("form").onsubmit=async e=>{
     const result=await api("orders",formData);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
     $("receiptText").textContent="Заявка принята. Менеджер свяжется с тобой по указанному контакту.";
-    $("cancelOrder").hidden=true;requestId=null;$("form").reset();syncArtwork();
+    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();syncArtwork();
   } catch(error) {await load().catch(()=>{});$("status").textContent=error.message;}
   finally {busy=false;$("submit").disabled=false;}
 };
