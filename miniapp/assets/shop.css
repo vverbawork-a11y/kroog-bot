@@ -176,7 +176,17 @@ body[data-panel="inquiry"] #ambientBg,body[data-panel="receipt"] #ambientBg{opac
 
 /* One gallery; normalized disc photos without supplier white top margin. */
 #colors{grid-auto-flow:row;align-items:stretch}
-#colors .tile{min-width:0;align-self:stretch}
+/* A row stretches to its longest caption. Anchor the contents of each
+   button to its top so extra height stays below the shorter caption. */
+#colors .tile {
+  min-width:0;
+  align-self:stretch;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+}
+#colors .tile > .tile-media { flex:none; }
 #colors .tile-media{
   position:relative;display:block;width:100%;height:auto;aspect-ratio:1;
   overflow:hidden;background:#f8f7f5;isolation:isolate;
