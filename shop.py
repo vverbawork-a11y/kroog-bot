@@ -21,7 +21,7 @@ import database
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-08-12"
+RELEASE = "2026-11-09-13"
 
 
 def setup():
@@ -81,7 +81,7 @@ async def catalog(request):
         name = row["name"]
         # Legacy duplicate of Ночной переливающийся. Preserve the existing DB
         # entry for historical order ids, but never list it as a product.
-        if name == "Русалка":
+        if name in {"Русалка", "Фиолетовый дымчатый", "Лиловый марбл"}:
             continue
         standard = name in colours.BY_NAME
         # Older colours stay available if present, but unknown old zero-stock
