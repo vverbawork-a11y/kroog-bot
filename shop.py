@@ -21,7 +21,7 @@ import database
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-13-15"
+RELEASE = "2026-11-13-16"
 
 
 def setup():

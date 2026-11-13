@@ -11,4 +11,14 @@
   --kroog-font: "ABC Monument Grotesk Cyrillic";
   --kroog-weight-body: 400;
   --kroog-weight-heading: 500;
+  /* Shared geometry: use these tokens for new screens and media. */
+  --kroog-radius: 12px;
+  --kroog-gutter: 20px;
+  --kroog-space-1: 4px;
+  --kroog-space-2: 8px;
+  --kroog-space-3: 12px;
+  --kroog-space-4: 16px;
+  --kroog-space-6: 24px;
+  --kroog-space-8: 32px;
+  --kroog-space-12: 48px;
 }

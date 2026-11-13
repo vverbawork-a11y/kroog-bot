@@ -56,7 +56,7 @@ function choose(c, fromClick=false) {
   if (fromClick) {
     requestAnimationFrame(()=>{
       // Form replaces the catalogue at the same scroll position, not below it.
-      const top = window.scrollY + $("form").getBoundingClientRect().top - 12;
+      const top = window.scrollY + document.querySelector("header").getBoundingClientRect().top;
       window.scrollTo(0,Math.max(0,top));
     });
   }
