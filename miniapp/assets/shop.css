@@ -281,3 +281,24 @@ body[data-panel="inquiry"] #ambientBg,body[data-panel="receipt"] #ambientBg{opac
   background:transparent!important;transform:none!important;clip-path:none!important;
   margin:0!important;padding:0!important;border:0!important;
 }
+
+/* Keep native video UI invisible whenever autoplay is blocked or paused.
+   The same supplied artwork continues moving underneath without a player. */
+#ambientBg{overflow:hidden}
+#ambientBg .ambient-still,#ambientVideo{position:absolute;inset:0;width:100%;height:100%}
+#ambientBg .ambient-still{
+  object-fit:cover;
+  animation:ambient-drift 16s ease-in-out infinite alternate;
+}
+#ambientVideo{object-fit:cover;pointer-events:none;opacity:0}
+#ambientBg.is-playing #ambientVideo{opacity:1}
+#ambientBg.is-playing .ambient-still{animation-play-state:paused}
+#ambientVideo::-webkit-media-controls,
+#ambientVideo::-webkit-media-controls-start-playback-button{display:none!important;-webkit-appearance:none}
+@keyframes ambient-drift{
+  from{transform:scale(1.14) translate(-3%,-2%)}
+  to{transform:scale(1.14) translate(3%,2%)}
+}
+@media(prefers-reduced-motion:reduce){
+  #ambientBg .ambient-still{animation:none}
+}

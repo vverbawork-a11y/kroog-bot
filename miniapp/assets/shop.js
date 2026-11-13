@@ -5,15 +5,6 @@ const money = n => n.toLocaleString("ru-RU") + " ₽";
 const panels = ["shop","inventory","about","receipt","inquiry","works"];
 let catalog, color, requestId, busy = false, choosing = true;
 let interestColor = null, interestRequestId = null;
-function startBackground() {
-  const video = $("ambientBg");
-  const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  const saveData = navigator.connection?.saveData;
-  // Always show the high-resolution still. Only stream motion when appropriate.
-  if (!video || reduce || saveData) return;
-  video.src = video.dataset.src;
-  video.play().catch(()=>{});
-}
 function display(panel) {
   document.body.dataset.panel=panel;
   for (const name of panels) $(name).hidden = name !== panel;
@@ -279,9 +270,9 @@ $("aboutNav").onclick=()=>display("about");
 $("worksNav").onclick=()=>display("works");
 $("stockNav").onclick=async()=>{display("inventory");try{await load();}catch(e){$("status").textContent=e.message;}};
 async function start(){
-  tg?.ready();tg?.expand();display("shop");
+  tg?.ready();tg?.expand();display("shop");startBackground();
   if (!tg?.initData) {$("status").textContent="Открой приложение из меню @kroog_vinyl_bot.";return;}
-  try {await load();startBackground();const id=new URLSearchParams(location.search).get("order");if(id && catalog.admin && /^\d+$/.test(id))await detail(id);}
+  try {await load();const id=new URLSearchParams(location.search).get("order");if(id && catalog.admin && /^\d+$/.test(id))await detail(id);}
   catch(e){$("status").textContent=e.message;}
 }
 start();

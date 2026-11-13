@@ -90,7 +90,7 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn('white-violet-bg.png', HTML)
         self.assertTrue((ASSETS / "white-violet-lines-hq.mp4").is_file())
         self.assertTrue((ASSETS / "white-violet-bg.png").is_file())
-        self.assertIn('prefers-reduced-motion', JS)
+        self.assertIn('prefers-reduced-motion', (ASSETS / 'ambient.js').read_text())
         self.assertIn('preload="none"', HTML)
 
 
