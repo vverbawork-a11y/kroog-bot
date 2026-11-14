@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<meta name="kroog-release" content="2026-11-14-20">
-<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=19">
+<meta name="kroog-release" content="2026-11-14-21">
+<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=21">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script defer src="/assets/ambient.js?v=15"></script>
-<script defer src="/assets/shop.js?v=20"></script>
+<script defer src="/assets/shop.js?v=21"></script>
 </head>
 <body>
 <div id="ambientBg" aria-hidden="true">
@@ -22,13 +22,12 @@
 <summary>Базовая комплектация</summary>
 <ul>
 <li>Пластинка выбранного цвета</li>
+<li>Белая центральная этикетка пластинки</li>
 <li>Белый или чёрный внешний конверт</li>
 <li>Внутренний антистатический бумажный конверт</li>
 <li>Внешний прозрачный защитный конверт</li>
-<li>Белая центральная этикетка пластинки</li>
 </ul>
 </details>
-<p class="help print-note">Цветную печать конверта и этикетки можно добавить при оформлении.</p>
 </div><div id="colors" class="grid"></div>
 <form id="form" hidden>
 <h2 id="selectedName"></h2>
@@ -37,10 +36,10 @@
 <summary>Базовая комплектация</summary>
 <ul>
 <li>Пластинка выбранного цвета</li>
+<li>Белая центральная этикетка пластинки</li>
 <li>Белый или чёрный внешний конверт</li>
 <li>Внутренний антистатический бумажный конверт</li>
 <li>Внешний прозрачный защитный конверт</li>
-<li>Белая центральная этикетка пластинки</li>
 </ul>
 </details>
 <div class="line"><label for="qty">Количество</label><div class="counter"><button type="button" id="minus" aria-label="Меньше">−</button><input id="qty" type="number" min="1" step="1" value="1" required><button type="button" id="plus" aria-label="Больше">+</button></div></div>
@@ -57,6 +56,13 @@
 <label class="line"><span>Цветное яблоко<small class="option-note">Яблоком называют центральную этикетку пластинки.</small><small id="labelPrice"></small></span><input type="checkbox" id="label"></label>
 <label class="line"><span>Заказ вне очереди<small id="rushPrice"></small></span><input type="checkbox" id="rush"></label>
 <label class="contact">Контакт для связи<input id="contact" required minlength="2" maxlength="120" placeholder="@username или телефон" autocomplete="off"></label>
+<details class="promo-entry" id="promoEntry">
+<summary>У меня есть промокод</summary>
+<label for="promoCode" class="visually-hidden">Промокод</label>
+<div class="promo-input"><input id="promoCode" maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Введите промокод"><button type="button" id="applyPromo">Применить</button></div>
+<p id="promoMessage" class="help" role="status" aria-live="polite"></p>
+<p class="help promo-terms">Один промокод на заказ. Со скидкой за тираж применяется большая из двух скидок.</p>
+</details>
 <div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div>
 <button class="action" id="submit">Оформить заказ</button>
 <p class="checkout-note">После заказа менеджер свяжется с вами, чтобы получить музыку и макеты, согласовать детали и оплату.</p>
@@ -77,8 +83,24 @@
 <p class="works-text">Скоро здесь появятся фотографии готовых релизов и отзывы их авторов.</p>
 </section>
 <section id="about" hidden>
-<h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b> Мы нарезаем вашу музыку на винил, печатаем цветные конверты с вашим оформлением и надёжно упаковываем ваше издание.</p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Вы выбираете цвет пластинки, оформление конверта и яблок, а мы помогаем подготовить материалы к производству.</p><p>Обычно изготовление занимает 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Этикетка («яблоко») · PDF</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>
-<section id="inventory" hidden><h1>Склад</h1><p>Укажите фактический остаток. Цвет с нулём останется в каталоге с отметкой «Нет в наличии» и кнопкой запроса.</p><div id="stocks"></div></section>
+<h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b></p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Вы выбираете цвет пластинки, оформление конверта и яблок, а мы помогаем подготовить материалы к производству.</p><p>Обычно изготовление занимает 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Этикетка («яблоко») · PDF</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>
+<section id="inventory" hidden><h1>Склад</h1><p>Укажите фактический остаток. Цвет с нулём останется в каталоге с отметкой «Нет в наличии» и кнопкой запроса.</p>
+<details id="promoManager" class="promo-manager" hidden>
+<summary>Промокоды</summary>
+<p class="help">Один промокод на заказ и одно использование на человека. Со скидкой за тираж применяется большая из двух скидок.</p>
+<form id="promoAdminForm">
+<label>Название кода<input id="newPromoCode" required minlength="3" maxlength="32" pattern="[A-Za-z0-9_-]{3,32}" autocomplete="off" placeholder="Латинские буквы и цифры"></label>
+<label>Скидка, %<input id="newPromoPercent" type="number" min="1" max="100" step="1" required></label>
+<label>Лимит использований<input id="newPromoLimit" type="number" min="1" step="1" placeholder="Без общего лимита"></label>
+<label>Действует до<input id="newPromoExpiry" type="datetime-local"></label>
+<label>Telegram ID получателя<input id="newPromoUser" type="number" min="1" step="1" placeholder="Для всех, у кого есть код"></label>
+<label class="promo-returning"><input id="newPromoReturning" type="checkbox">Только для повторного заказа</label>
+<button type="submit" id="createPromo">Создать промокод</button>
+<p class="help" id="promoAdminStatus" role="status" aria-live="polite"></p>
+</form>
+<div id="promoList"></div>
+</details>
+<div id="stocks"></div></section>
 <section id="receipt" hidden><h1 id="receiptTitle"></h1><p id="receiptText"></p><div id="receiptFiles"></div><button id="back" class="action">Вернуться к цветам</button><button id="cancelOrder" hidden>Отменить и вернуть на склад</button></section>
 <p role="status" aria-live="polite" id="status">Загружаем цвета…</p>
 </main></body></html>

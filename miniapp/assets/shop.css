@@ -57,14 +57,36 @@ main figure{margin:0 0 var(--kroog-space-6);border-radius:var(--kroog-radius);ov
 
 /* A small native disclosure keeps the catalogue focused on the records. */
 .stock-intro .help{margin-bottom:var(--kroog-space-2)}
-.stock-intro .package-details{margin-bottom:var(--kroog-space-2)}
-.stock-intro .print-note{margin-bottom:var(--kroog-space-6)}
+.stock-intro .package-details{margin-bottom:var(--kroog-space-6)}
 .package-details{font-size:14px;line-height:1.45;margin:0 0 var(--kroog-space-6)}
 .package-details summary{cursor:pointer;font-weight:500;width:fit-content;padding-block:var(--kroog-space-1)}
 .package-details summary:focus-visible{outline:3px solid var(--kroog-orange);outline-offset:2px;border-radius:var(--kroog-radius)}
 .package-details ul{padding-left:var(--kroog-gutter);margin:var(--kroog-space-2) 0 0}
 .package-details li+li{margin-top:var(--kroog-space-2)}
 .line .option-note{font-size:13px;line-height:1.4;margin-top:var(--kroog-space-1)}
+
+/* Promo entry stays beside checkout; management is only in the admin view. */
+.promo-entry,.promo-manager{margin:var(--kroog-space-6) 0}
+.promo-entry summary,.promo-manager summary{cursor:pointer;padding-block:var(--kroog-space-2)}
+.promo-entry summary:focus-visible,.promo-manager summary:focus-visible{outline:3px solid var(--kroog-orange);outline-offset:2px;border-radius:var(--kroog-radius)}
+.promo-input{display:flex;gap:var(--kroog-space-2);margin-top:var(--kroog-space-2)}
+.promo-input input{min-width:0;flex:1;width:100%;text-transform:uppercase}
+.promo-input button{flex-shrink:0;font-size:14px}
+#promoMessage,#promoAdminStatus{margin:var(--kroog-space-2) 0 0}
+#promoMessage:empty,#promoAdminStatus:empty{display:none}
+.promo-terms{font-size:12px;margin:var(--kroog-space-2) 0 0}
+#promoAdminForm{display:grid;grid-template-columns:1fr 1fr;gap:var(--kroog-space-4);margin:var(--kroog-space-4) 0}
+#promoAdminForm>label{display:grid;gap:var(--kroog-space-2);font-size:14px;min-width:0}
+#promoAdminForm input{width:100%;min-width:0}
+#promoAdminForm .promo-returning{display:flex;align-items:center;grid-column:1/-1}
+#promoAdminForm .promo-returning input{width:23px}
+#promoAdminStatus{grid-column:1/-1}
+.promo-row{border-top:1px solid #4a151334;padding:var(--kroog-space-4) 0;display:flex;align-items:center;justify-content:space-between;gap:var(--kroog-space-3)}
+.promo-row>div{min-width:0;overflow-wrap:anywhere}
+.promo-row small{display:block;margin-top:var(--kroog-space-1)}
+.promo-row button{font-size:14px;flex-shrink:0}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+@media(max-width:360px){#promoAdminForm{grid-template-columns:1fr}}
 
 /* Product cards keep photographs and captions together; no nested panels. */
 .tile{

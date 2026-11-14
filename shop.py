@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import sqlite3
 import time
 import uuid
 from contextlib import closing
@@ -19,11 +20,12 @@ import calculator as prices
 import colours
 import config
 import database
+import promotions
 
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-14-20"
+RELEASE = "2026-11-14-21"
 
 
 def setup():
@@ -39,6 +41,8 @@ def setup():
             notified INTEGER NOT NULL DEFAULT 0,
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(user_id, request_id))""")
+
+        promotions.setup(db)
 
 
 def identity(request):
@@ -126,6 +130,63 @@ def number(data, key, minimum):
     return n
 
 
+def order_totals(db, data, user_id):
+    qty = number(data, "quantity", 1)
+    color_id = number(data, "color", 1)
+    if any(type(data.get(k)) is not bool for k in ("sleeve", "label", "rush")):
+        raise web.HTTPBadRequest(text="Проверьте параметры заказа.")
+    color = db.execute("SELECT * FROM colors WHERE id=?", (color_id,)).fetchone()
+    if not color or color["stock"] < qty:
+        raise web.HTTPConflict(text="Остаток изменился. Выберите доступное количество.")
+    totals = prices.calculate(color["is_black"], qty, data["sleeve"], data["label"], data["rush"],
+                              unit_price_override=colours.record(color["name"], bool(color["is_black"]))["price"])
+    promo = None
+    value = data.get("promo_code", "")
+    if not isinstance(value, str):
+        raise web.HTTPBadRequest(text="Можно применить только один промокод.")
+    if value.strip():
+        try:
+            promo = promotions.validate(db, value, user_id)
+        except promotions.PromoError as error:
+            raise web.HTTPBadRequest(text=str(error))
+        totals = promotions.discount(totals, promo)
+    return color, totals, promo
+
+
+async def quote_order(request):
+    user = identity(request)
+    data = await payload(request)
+    with closing(database.get_connection()) as db:
+        _, totals, _ = order_totals(db, data, user["id"])
+    return web.json_response(totals, headers={"Cache-Control": "no-store"})
+
+
+async def manage_promos(request):
+    admin(request)
+    with closing(database.get_connection()) as db, db:
+        if request.method == "POST":
+            data = await payload(request)
+            if "id" in request.match_info:
+                if type(data.get("active")) is not bool:
+                    raise web.HTTPBadRequest(text="Укажите статус промокода.")
+                result = db.execute("UPDATE promotions SET active=? WHERE id=?",
+                                    (int(data["active"]), request.match_info["id"]))
+                if not result.rowcount:
+                    raise web.HTTPNotFound(text="Промокод не найден.")
+            else:
+                try:
+                    promotions.create(db, data)
+                except promotions.PromoError as error:
+                    raise web.HTTPBadRequest(text=str(error))
+                except sqlite3.IntegrityError:
+                    raise web.HTTPConflict(text="Промокод с таким названием уже существует.")
+        rows = db.execute("""SELECT p.*, (SELECT COUNT(*) FROM promotion_uses u
+            WHERE u.promo_id=p.id AND u.released=0) AS used
+            FROM promotions p ORDER BY p.id DESC""").fetchall()
+        return web.json_response({"promos": [dict(row) for row in rows]},
+                                 headers={"Cache-Control": "private, no-store"})
+
+
 async def place(request):
     user = identity(request)
     if not config.ADMIN_ID:
@@ -182,13 +243,7 @@ async def place(request):
                 if old:
                     db.rollback()
                     return web.json_response({"id": old["id"]})
-                color = db.execute("SELECT * FROM colors WHERE id=?", (color_id,)).fetchone()
-                if not color or color["stock"] < qty:
-                    raise web.HTTPConflict(text="Остаток изменился. Выберите доступное количество.")
-                totals = prices.calculate(
-            color["is_black"], qty, data["sleeve"], data["label"], data["rush"],
-            unit_price_override=colours.record(color["name"], bool(color["is_black"]))["price"]
-        )
+                color, totals, promo = order_totals(db, data, user["id"])
                 details = dict(
                     color=color["name"], contact=contact.strip(), user_id=user["id"],
                     name=" ".join(filter(None, (user.get("first_name"), user.get("last_name")))),
@@ -201,6 +256,9 @@ async def place(request):
                     "INSERT INTO shop_orders(user_id,request_id,color_id,quantity,details) VALUES(?,?,?,?,?)",
                     (user["id"], request_id, color_id, qty, json.dumps(details, ensure_ascii=False))
                 )
+                if promo and totals.get("promo_applied"):
+                    db.execute("INSERT INTO promotion_uses(promo_id,order_id,user_id) VALUES(?,?,?)",
+                               (promo["id"], order.lastrowid, user["id"]))
                 saved = artwork.finalize(stage, order.lastrowid, files)
                 db.commit()
                 committed = True
@@ -270,7 +328,7 @@ async def stock(request):
             (stock_qty, int(arriving), color_id, old_stock, int(old_arriving))
         )
         if not result.rowcount:
-            raise web.HTTPConflict(text="Остаток или статус уже изменился. Обнови страницу.")
+            raise web.HTTPConflict(text="Остаток или статус уже изменился. Обновите страницу.")
     return web.json_response({"ok": True})
 
 
@@ -285,6 +343,7 @@ async def manager_order(request):
         if request.method == "POST" and not cancelled:
             db.execute("UPDATE colors SET stock=stock+? WHERE id=?", (row["quantity"],row["color_id"]))
             db.execute("UPDATE shop_orders SET cancelled=1 WHERE id=?", (row["id"],))
+            db.execute("UPDATE promotion_uses SET released=1 WHERE order_id=?", (row["id"],))
             cancelled = True
         return web.json_response(dict(json.loads(row["details"]), id=row["id"], cancelled=cancelled))
 
@@ -318,6 +377,8 @@ async def notify_orders(bot):
             message = (f"Заказ №{ref}\n{o['color']} × {o['quantity']}\n{options}\n"
                        f"Итого {o['total']} ₽\n{o['name']} · {o['contact']}")
             message += f"\nМакеты прикреплены: {len(o.get('files', {}))}" if o["sleeve"] or o["label"] else ""
+            if o.get("promo_applied"):
+                message += f"\nПромокод: {o['promo_code']} ({o['promo_percent']}%)"
             message += f"\nСкорость: {o.get('rpm', 33)} RPM"
             for side in ("a", "b"):
                 tracks = o.get("tracklist_" + side) or []
@@ -394,6 +455,10 @@ def application():
     app.router.add_get("/api/release", release)
     app.router.add_get("/api/catalog", catalog)
     app.router.add_post("/api/orders", place)
+    app.router.add_post("/api/quote", quote_order)
+    app.router.add_get("/api/promos", manage_promos)
+    app.router.add_post("/api/promos", manage_promos)
+    app.router.add_post(r"/api/promos/{id:\d+}", manage_promos)
     app.router.add_post("/api/inquiries", inquiry)
     app.router.add_post("/api/stock", stock)
     app.router.add_get(r"/api/orders/{id:\d+}", manager_order)

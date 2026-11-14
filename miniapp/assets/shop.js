@@ -5,6 +5,7 @@ const money = n => n.toLocaleString("ru-RU") + " ₽";
 const panels = ["shop","inventory","about","receipt","inquiry","works"];
 let catalog, color, requestId, busy = false, choosing = true;
 let interestColor = null, interestRequestId = null;
+let activePromo = null, promoEpoch = 0;
 function display(panel) {
   document.body.dataset.panel=panel;
   for (const name of panels) $(name).hidden = name !== panel;
@@ -33,13 +34,18 @@ function prices() {
   const qty = Number($("qty").value);
   let unit = color.price + ($("sleeve").checked ? catalog.sleeve:0) + ($("label").checked ? catalog.label:0);
   if ($("rush").checked) unit = Math.round(unit*(100+catalog.rush)/100);
-  const pct = catalog.discounts.find(([min])=>qty >= min)?.[1] || 0;
+  const volumePct = catalog.discounts.find(([min])=>qty >= min)?.[1] || 0;
+  const promoWins = activePromo && activePromo.percent > volumePct;
+  const pct = Math.max(volumePct, activePromo?.percent || 0);
   const subtotal = qty*unit;
   // Python round() uses ties-to-even for the discount in rubles.
   const raw = subtotal*pct/100;
   const discount = raw % 1 === 0.5 && Math.floor(raw)%2===0 ? Math.floor(raw):Math.round(raw);
   $("total").textContent = money(subtotal-discount);
-  $("discount").textContent = pct ? "Скидка за тираж "+pct+"% · −"+money(discount):"";
+  $("discount").textContent = pct ? (promoWins ? "Промокод "+activePromo.code : "Скидка за тираж")+" "+pct+"% · −"+money(discount):"";
+  if (activePromo) $("promoMessage").textContent = promoWins
+    ? "Промокод применён. Скидка "+activePromo.percent+"%."
+    : "Скидка за тираж выгоднее или равна. Промокод не расходуется.";
 }
 function choose(c, fromClick=false) {
   if (fromClick) {choosing=false;requestId=null;}
@@ -64,6 +70,7 @@ function choose(c, fromClick=false) {
 async function load() {
   catalog = await api("catalog");
   $("stockNav").hidden = !catalog.admin;
+  $("promoManager").hidden = !catalog.admin;
   if (catalog.channel) { $("channel").href = catalog.channel; $("channel").hidden = false; }
   if (!$("contact").value) $("contact").value = catalog.contact;
   $("sleevePrice").textContent = "+"+money(catalog.sleeve)+" за экземпляр";
@@ -200,6 +207,82 @@ function renderStock() {
     row.append(label,input,arrival,save);$("stocks").append(row);
   }
 }
+function orderPayload() {
+  return {color:color?.id,quantity:$("qty").valueAsNumber,
+    sleeve:$("sleeve").checked,label:$("label").checked,rush:$("rush").checked,
+    promo_code:activePromo?.code || ""};
+}
+async function applyPromo() {
+  const code=$("promoCode").value.trim().toUpperCase();
+  const epoch=++promoEpoch;
+  activePromo=null;prices();
+  if (!code) {$("promoMessage").textContent="Введите промокод.";return false;}
+  $("applyPromo").disabled=true;$("promoMessage").textContent="Проверяем промокод…";
+  try {
+    const result=await api("quote",{...orderPayload(),promo_code:code});
+    if (epoch!==promoEpoch) return false;
+    activePromo={code:result.promo_code,percent:result.promo_percent};
+    $("promoCode").value=activePromo.code;
+    prices();return true;
+  } catch(error) {
+    if(epoch===promoEpoch) {$("promoMessage").textContent=error.message;prices();}
+    return false;
+  } finally {$("applyPromo").disabled=false;}
+}
+function resetPromo() {
+  activePromo=null;promoEpoch++;
+  $("promoCode").value="";$("promoMessage").textContent="";$("promoEntry").open=false;
+}
+$("applyPromo").onclick=applyPromo;
+$("promoCode").addEventListener("keydown",event=>{
+  if(event.key==="Enter") {event.preventDefault();applyPromo();}
+});
+async function loadPromos() {
+  const response=await api("promos");renderPromos(response.promos);
+}
+function renderPromos(promos) {
+  $("promoList").replaceChildren();
+  if(!promos.length) {
+    const empty=document.createElement("p");empty.className="help";
+    empty.textContent="Промокодов пока нет. Размер скидки выбираете вы.";
+    $("promoList").append(empty);return;
+  }
+  for(const promo of promos) {
+    const row=document.createElement("div");row.className="promo-row";
+    const info=document.createElement("div"), title=document.createElement("strong"), note=document.createElement("small");
+    const expired=promo.expires_at && promo.expires_at*1000<=Date.now();
+    title.textContent=promo.code+" · "+promo.percent+"%";
+    const conditions=[promo.active ? (expired ? "Истёк" : "Включён") : "Отключён",
+      "Использований: "+promo.used+(promo.max_uses ? " из "+promo.max_uses : "")];
+    if(promo.expires_at) conditions.push("До "+new Date(promo.expires_at*1000).toLocaleString("ru-RU"));
+    if(promo.user_id) conditions.push("Получатель: "+promo.user_id);
+    if(promo.returning_only) conditions.push("Для повторного заказа");
+    note.textContent=conditions.join(" · ");info.append(title,note);
+    const toggle=button(promo.active ? "Отключить" : "Включить",async()=>{
+      toggle.disabled=true;
+      try {const result=await api("promos/"+promo.id,{active:!promo.active});renderPromos(result.promos);}
+      catch(error){$("promoAdminStatus").textContent=error.message;toggle.disabled=false;}
+    });
+    row.append(info,toggle);$("promoList").append(row);
+  }
+}
+$("promoAdminForm").onsubmit=async event=>{
+  event.preventDefault();$("createPromo").disabled=true;
+  const expiry=$("newPromoExpiry").value;
+  try {
+    const result=await api("promos",{
+      code:$("newPromoCode").value,percent:$("newPromoPercent").valueAsNumber,
+      max_uses:$("newPromoLimit").value ? $("newPromoLimit").valueAsNumber : null,
+      expires_at:expiry ? Math.floor(new Date(expiry).getTime()/1000) : null,
+      user_id:$("newPromoUser").value ? $("newPromoUser").valueAsNumber : null,
+      returning_only:$("newPromoReturning").checked
+    });
+    renderPromos(result.promos);$("promoAdminForm").reset();
+    $("promoAdminStatus").textContent="Промокод создан. Его можно передать получателям.";
+  }catch(error){$("promoAdminStatus").textContent=error.message;}
+  finally{$("createPromo").disabled=false;}
+};
+
 // Minimal checkout: audio, tracklist and print files are collected by the manager.
 function musicGuide() {
   const rpm = document.querySelector('input[name="rpm"]:checked')?.value || "33";
@@ -209,22 +292,34 @@ function musicGuide() {
 }
 for (const radio of document.querySelectorAll('input[name="rpm"]')) radio.addEventListener("change",musicGuide);
 musicGuide();
-$("form").oninput=()=>{requestId=null;prices();musicGuide();};
+$("form").oninput=event=>{
+  requestId=null;promoEpoch++;
+  if(event.target.id==="promoCode") activePromo=null;
+  if(!activePromo) $("promoMessage").textContent="";
+  prices();musicGuide();
+};
 $("minus").onclick=()=>{$("qty").stepDown();requestId=null;prices();};
 $("plus").onclick=()=>{$("qty").stepUp();requestId=null;prices();};
 $("form").onsubmit=async e=>{
   e.preventDefault();if (!color || busy) return;busy=true;$("submit").disabled=true;
   requestId ||= crypto.randomUUID();
   try {
-    const payload = {color:color.id,quantity:$("qty").valueAsNumber,
-      sleeve:$("sleeve").checked,label:$("label").checked,rush:$("rush").checked,
-      contact:$("contact").value,request_id:requestId,
+    if ($("promoCode").value.trim() && activePromo?.code !== $("promoCode").value.trim().toUpperCase()) {
+      if(!await applyPromo()) {$("promoEntry").open=true;return;}
+    }
+    const payload = {...orderPayload(),contact:$("contact").value,request_id:requestId,
       rpm:Number(document.querySelector('input[name="rpm"]:checked')?.value||33)};
     const result=await api("orders",payload);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
     $("receiptText").textContent="Заказ оформлен! Менеджер свяжется с вами, чтобы получить музыку и макеты, обсудить детали и оплату.";
-    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();musicGuide();
-  } catch(error) {await load().catch(()=>{});$("status").textContent=error.message;}
+    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();resetPromo();musicGuide();
+  } catch(error) {
+    if(/промокод/i.test(error.message)) {
+      activePromo=null;promoEpoch++;$("promoEntry").open=true;
+      $("promoMessage").textContent=error.message;
+    }
+    await load().catch(()=>{});$("status").textContent=error.message;
+  }
   finally {busy=false;$("submit").disabled=false;}
 };
 async function detail(id) {
@@ -233,6 +328,7 @@ async function detail(id) {
   const opts=[o.sleeve&&"цветной конверт",o.label&&"цветное яблоко",o.rush&&"срочно"].filter(Boolean).join(", ");
   $("receiptText").textContent=[o.cancelled?"Отменён":"Принят",o.color+" × "+o.quantity,opts||"Без доплат",
     "Итого "+money(o.total),
+    ...(o.promo_applied ? ["Промокод: "+o.promo_code+" · "+o.promo_percent+"%"] : []),
     "Скорость: "+(o.rpm||33)+" RPM",
     (o.tracklist_a?.length ? "A: "+o.tracklist_a.join("; ") : "A: треклист позже"),
     (o.tracklist_b?.length ? "B: "+o.tracklist_b.join("; ") : "B: треклист позже"),
@@ -268,7 +364,7 @@ async function openShop(){choosing=true;display("shop");try{await load();}catch(
 $("changeColor").onclick=openShop;$("shopNav").onclick=openShop;$("back").onclick=openShop;
 $("aboutNav").onclick=()=>display("about");
 $("worksNav").onclick=()=>display("works");
-$("stockNav").onclick=async()=>{display("inventory");try{await load();}catch(e){$("status").textContent=e.message;}};
+$("stockNav").onclick=async()=>{display("inventory");try{await load();await loadPromos();}catch(e){$("status").textContent=e.message;}};
 async function start(){
   tg?.ready();tg?.expand();display("shop");startBackground();
   if (!tg?.initData) {$("status").textContent="Откройте приложение из меню @kroog_vinyl_bot.";return;}
