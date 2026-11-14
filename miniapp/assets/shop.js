@@ -157,7 +157,7 @@ $("inquiryForm").onsubmit=async e=>{
     display("receipt");
     $("receiptTitle").textContent="Запрос №"+response.id;
     $("receiptText").textContent="Запрос по цвету «"+interestColor.name+
-      "» отправлен. Мы свяжемся с тобой по указанному контакту.";
+      "» отправлен. Мы свяжемся с вами по указанному контакту.";
     $("receiptFiles").replaceChildren();
     $("cancelOrder").hidden=true;
     interestRequestId=null;
@@ -222,7 +222,7 @@ $("form").onsubmit=async e=>{
       rpm:Number(document.querySelector('input[name="rpm"]:checked')?.value||33)};
     const result=await api("orders",payload);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
-    $("receiptText").textContent="Заказ оформлен! Менеджер свяжется с тобой, чтобы получить музыку и макеты, обсудить детали и оплату.";
+    $("receiptText").textContent="Заказ оформлен! Менеджер свяжется с вами, чтобы получить музыку и макеты, обсудить детали и оплату.";
     $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();musicGuide();
   } catch(error) {await load().catch(()=>{});$("status").textContent=error.message;}
   finally {busy=false;$("submit").disabled=false;}
@@ -271,7 +271,7 @@ $("worksNav").onclick=()=>display("works");
 $("stockNav").onclick=async()=>{display("inventory");try{await load();}catch(e){$("status").textContent=e.message;}};
 async function start(){
   tg?.ready();tg?.expand();display("shop");startBackground();
-  if (!tg?.initData) {$("status").textContent="Открой приложение из меню @kroog_vinyl_bot.";return;}
+  if (!tg?.initData) {$("status").textContent="Откройте приложение из меню @kroog_vinyl_bot.";return;}
   try {await load();const id=new URLSearchParams(location.search).get("order");if(id && catalog.admin && /^\d+$/.test(id))await detail(id);}
   catch(e){$("status").textContent=e.message;}
 }

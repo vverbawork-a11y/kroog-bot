@@ -23,7 +23,7 @@ import database
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-14-19"
+RELEASE = "2026-11-14-20"
 
 
 def setup():
@@ -243,7 +243,7 @@ async def inquiry(request):
             "AND created_at > datetime('now', '-1 day')", (user["id"],)
         ).fetchone()[0]
         if count >= 5:
-            raise web.HTTPTooManyRequests(text="Слишком много запросов за день. Напиши менеджеру напрямую.")
+            raise web.HTTPTooManyRequests(text="Слишком много запросов за день. Напишите менеджеру напрямую.")
         result = db.execute(
             "INSERT INTO shop_inquiries(user_id,color_id,contact,request_id) VALUES(?,?,?,?)",
             (user["id"], color_id, contact.strip(), request_id)
