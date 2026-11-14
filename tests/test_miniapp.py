@@ -155,8 +155,8 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         by_name = {p["name"]: p for p in public["colors"]}
         self.assertGreaterEqual(len(by_name), 32)
         self.assertEqual(by_name["Оранжевый прозрачный"]["atlas"], 24)
-        self.assertEqual(by_name["Прозрачный"]["price"], 3900)
-        self.assertEqual(by_name["Ночной переливающийся"]["price"], 6500)
+        self.assertEqual(by_name["Прозрачный"]["price"], 4400)
+        self.assertEqual(by_name["Ночной переливающийся"]["price"], 7000)
         self.assertNotIn("Русалка", by_name)
         self.assertEqual(by_name["Чёрный"]["stock"], 5)
         self.assertEqual(by_name["Оранжевый прозрачный"]["stock"], 0)
@@ -238,9 +238,27 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
             details = json.loads(db.execute(
                 "SELECT details FROM shop_orders WHERE id=?", (order_id,)
             ).fetchone()["details"])
-        self.assertEqual(details["unit_price"], 3900)
-        self.assertEqual(details["total"], 3900)
+        self.assertEqual(details["unit_price"], 4400)
+        self.assertEqual(details["total"], 4400)
 
+
+    async def test_existing_order_keeps_its_agreed_price_after_catalogue_change(self):
+        from unittest.mock import patch
+        import colours
+        params = self.params()
+        params.update(quantity=1, sleeve=False, label=False)
+        response = await self.submit(params, files=False)
+        self.assertEqual(response.status, 201)
+        order_id = (await response.json())["id"]
+        color_name = database.get_color(params["color"])["name"]
+        before = await self.client.get(f"/api/orders/{order_id}", headers=self.headers(42))
+        original = await before.json()
+        updated = dict(colours.record(color_name), price=99000)
+        with patch.dict(colours.BY_NAME, {color_name: updated}):
+            after = await self.client.get(f"/api/orders/{order_id}", headers=self.headers(42))
+            saved = await after.json()
+        self.assertEqual(saved["total"], original["total"])
+        self.assertEqual(saved["unit_price"], original["unit_price"])
 
     async def test_current_physical_stock_and_incoming_colours(self):
         available={"Красный марбл": 10, "Прозрачный": 10,

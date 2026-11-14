@@ -71,8 +71,8 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn('Заказ вне очереди', HTML)
 
     def test_renamed_and_hidden_colours(self):
-        self.assertIn(("Розовый марбл", 5500, 18), colours.COLOURS)
-        self.assertNotIn(("Лиловый марбл", 5500, 18), colours.COLOURS)
+        self.assertIn(("Розовый марбл", 6000, 18), colours.COLOURS)
+        self.assertNotIn(("Лиловый марбл", 6000, 18), colours.COLOURS)
 
     def test_clean_navigation_and_no_unwanted_art(self):
         self.assertLess(HTML.index('id="aboutNav"'), HTML.index('id="worksNav"'))

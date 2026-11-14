@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<meta name="kroog-release" content="2026-11-14-17">
-<link rel="stylesheet" href="/assets/brand.css?v=16"><link rel="stylesheet" href="/assets/shop.css?v=16">
+<meta name="kroog-release" content="2026-11-14-18">
+<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=18">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script defer src="/assets/ambient.js?v=15"></script>
 <script defer src="/assets/shop.js?v=16"></script>
@@ -17,10 +17,29 @@
 <header><img src="/assets/kroog-logo.svg" width="88" alt="Круг"><nav><button id="shopNav">Заказ</button><button id="aboutNav">О нас</button><button id="worksNav">Работы</button><button id="stockNav" hidden>Склад</button></nav></header>
 <main>
 <section id="shop">
-<div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><p class="help" id="stockHint">Указана цена только за пластинку, без печати.</p><div id="colors" class="grid"></div>
+<div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><div id="stockHint" class="stock-intro"><p class="help">В цене — пластинка с базовой комплектацией. Цветная печать — отдельно.</p>
+<details class="package-details">
+<summary>Что входит в цену</summary>
+<ul>
+<li>Белый или чёрный конверт</li>
+<li>Внутренний бумажный антистатический конверт</li>
+<li>Внешний прозрачный защитный конверт</li>
+<li>Белое яблоко — центральная этикетка пластинки</li>
+</ul>
+</details>
+</div><div id="colors" class="grid"></div>
 <form id="form" hidden>
 <h2 id="selectedName"></h2>
 <button type="button" id="changeColor" class="text-back">← Другой цвет</button>
+<details class="package-details">
+<summary>Что входит в цену</summary>
+<ul>
+<li>Белый или чёрный конверт</li>
+<li>Внутренний бумажный антистатический конверт</li>
+<li>Внешний прозрачный защитный конверт</li>
+<li>Белое яблоко — центральная этикетка пластинки</li>
+</ul>
+</details>
 <div class="line"><label for="qty">Количество</label><div class="counter"><button type="button" id="minus" aria-label="Меньше">−</button><input id="qty" type="number" min="1" step="1" value="1" required><button type="button" id="plus" aria-label="Больше">+</button></div></div>
 <fieldset class="audio-setup" id="audioSetup">
 <legend>Скорость записи</legend>
@@ -32,7 +51,7 @@
 </fieldset>
 <div class="options-label">Дополнительно</div>
 <label class="line"><span>Цветная печать конверта<small id="sleevePrice"></small></span><input type="checkbox" id="sleeve"></label>
-<label class="line"><span>Цветное яблоко<small id="labelPrice"></small></span><input type="checkbox" id="label"></label>
+<label class="line"><span>Цветное яблоко<small class="option-note">Яблоко — центральная этикетка пластинки.</small><small id="labelPrice"></small></span><input type="checkbox" id="label"></label>
 <label class="line"><span>Заказ вне очереди<small id="rushPrice"></small></span><input type="checkbox" id="rush"></label>
 <label class="contact">Контакт для связи<input id="contact" required minlength="2" maxlength="120" placeholder="@username или телефон" autocomplete="off"></label>
 <div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div>
@@ -55,7 +74,7 @@
 <p class="works-text">Скоро здесь появятся фотографии готовых релизов и отзывы их авторов.</p>
 </section>
 <section id="about" hidden>
-<h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b> Мы нарезаем твою музыку на винил и собираем каждый экземпляр отдельно — от звуковой дорожки до оформления и упаковки.</p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Ты выбираешь цвет винила, конверт и оформление яблок, а мы помогаем подготовить материалы к производству.</p><p>Ориентировочный срок — 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Яблоко · PDF</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>
+<h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b> Мы нарезаем твою музыку на винил и собираем каждый экземпляр отдельно — от звуковой дорожки до оформления и упаковки.</p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Ты выбираешь цвет винила, конверт и оформление центральных этикеток («яблок»), а мы помогаем подготовить материалы к производству.</p><p>Ориентировочный срок — 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Этикетка («яблоко») · PDF</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>
 <section id="inventory" hidden><h1>Склад</h1><p>Укажи фактический остаток. Цвет с нулём останется в каталоге с отметкой «Нет в наличии» и кнопкой запроса.</p><div id="stocks"></div></section>
 <section id="receipt" hidden><h1 id="receiptTitle"></h1><p id="receiptText"></p><div id="receiptFiles"></div><button id="back" class="action">Вернуться к цветам</button><button id="cancelOrder" hidden>Отменить и вернуть на склад</button></section>
 <p role="status" aria-live="polite" id="status">Загружаем цвета…</p>

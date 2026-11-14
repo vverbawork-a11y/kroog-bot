@@ -14,10 +14,11 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, FSInputFile, InputMediaPhoto, Message
 
 import calculator
+import colours
 import database
 from config import ADMIN_ID
 from keyboards import back_to_menu, main_menu, order_colors, order_confirm, order_yes_no
-from texts import WELCOME
+from texts import WELCOME, BASE_PACKAGE
 
 router = Router()
 
@@ -109,7 +110,7 @@ async def start_order(callback: CallbackQuery, state: FSMContext) -> None:
         return
     await state.set_state(Order.color)
     await callback.message.edit_text(
-        "🎨 <b>Шаг 1/6.</b> Выберите цвет пластинки:",
+        "🎨 <b>Шаг 1/6.</b> Выберите цвет пластинки:\n\n" + BASE_PACKAGE,
         reply_markup=order_colors(colors),
     )
     await callback.answer()
@@ -165,7 +166,8 @@ async def choose_color(callback: CallbackQuery, state: FSMContext) -> None:
     await state.set_state(Order.quantity)
     await callback.message.edit_text(
         f"Выбран цвет: <b>{color['name']}</b>\n"
-        f"На складе: <b>{color['stock']} шт</b>\n\n"
+        f"На складе: <b>{color['stock']} шт</b>\n"
+        f"Цена с базовой комплектацией: <b>{colours.record(color['name'], bool(color['is_black']))['price']} ₽</b>\n\n"
         f"🔢 <b>Шаг 2/6.</b> Напишите нужный тираж (числом, например 10).\n\n"
         f"💰 <b>Скидки за тираж:</b>\n"
         f"• от 5 шт — 5%\n"
@@ -262,7 +264,7 @@ async def receive_envelope_design(message: Message, state: FSMContext) -> None:
 async def ask_label(target: Message, state: FSMContext) -> None:
     await state.set_state(Order.label)
     await target.answer(
-        f"💿 <b>Шаг 5/6.</b> Добавить печать яблока (лейбла) с вашим дизайном?\n"
+        f"💿 <b>Шаг 5/6.</b> Добавить печать яблока (центральной этикетки) с вашим дизайном?\n"
         f"<b>Цена: {calculator.PRICE_LABEL} ₽.</b>\n"
         f"Нужно прислать <b>2 макета</b>: отдельно для стороны A и стороны B.",
         reply_markup=order_yes_no("order_lbl"),
@@ -347,6 +349,7 @@ async def show_summary(message: Message, state: FSMContext) -> None:
         print_envelope=data["print_envelope"],
         print_label=data["print_label"],
         urgent=data["urgent"],
+        unit_price_override=colours.record(data["color_name"], data["is_black"])["price"],
     )
     await state.update_data(total=price["total"])
 
@@ -371,6 +374,7 @@ async def show_summary(message: Message, state: FSMContext) -> None:
         f"Печать конверта: {envelope}\n"
         f"Печать яблока: {label}\n"
         f"Аудио: {audio}\n\n"
+        f"{BASE_PACKAGE}\n\n"
         f"Цена за штуку: {price['per_piece']} ₽\n"
         f"Без скидки: {price['subtotal']} ₽\n"
         f"{discount_line}"
