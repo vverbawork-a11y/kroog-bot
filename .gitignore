@@ -18,3 +18,8 @@ __pycache__/
 
 # Служебное (редактор Claude Code)
 .claude/
+
+# Runtime releases and application data
+.kroog-autodeploy/
+data/
+miniapp/assets/previews/

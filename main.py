@@ -8,6 +8,7 @@ import asyncio
 import logging
 import os
 from contextlib import suppress
+from pathlib import Path
 from aiohttp import web
 from aiogram.types import MenuButtonWebApp, WebAppInfo
 import shop
@@ -117,14 +118,22 @@ async def main() -> None:
             # Versioned Telegram menu URL invalidates WebView navigation cache.
             url_parts = urlsplit(MINIAPP_URL)
             query = dict(parse_qsl(url_parts.query, keep_blank_values=True))
-            query["kroog_version"] = shop.RELEASE
+            commit = os.getenv("KROOG_COMMIT", "image")
+            query["kroog_version"] = commit if commit != "image" else shop.RELEASE
             fresh_url = urlunsplit(url_parts._replace(query=urlencode(query)))
             await bot.set_chat_menu_button(menu_button=MenuButtonWebApp(
                 text="Заказать", web_app=WebAppInfo(url=fresh_url)))
             notifier = asyncio.create_task(shop.notify_orders(bot))
         await setup_bot_profile(bot)
+        # The supervisor promotes a release only after Telegram setup and the
+        # Mini App server have started successfully.
+        ready_file = os.getenv("KROOG_READY_FILE")
+        if ready_file:
+            Path(ready_file).write_text("ready", encoding="utf-8")
         await dp.start_polling(bot, close_bot_session=False)
     finally:
+        if os.getenv("KROOG_READY_FILE"):
+            Path(os.environ["KROOG_READY_FILE"]).unlink(missing_ok=True)
         if notifier:
             notifier.cancel()
             with suppress(asyncio.CancelledError):

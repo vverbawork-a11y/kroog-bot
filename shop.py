@@ -4,6 +4,8 @@ import hashlib
 import hmac
 import json
 import logging
+import os
+import re
 import time
 import uuid
 from contextlib import closing
@@ -21,7 +23,7 @@ import database
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-13-16"
+RELEASE = "2026-11-14-17"
 
 
 def setup():
@@ -362,13 +364,30 @@ def application():
     app = web.Application(client_max_size=90 * 1024 * 1024)
     async def home(request):
         # Telegram WebView and proxy caches must not keep obsolete app HTML.
-        return web.FileResponse(APP / "index.html", headers={
+        html = (APP / "index.html").read_text(encoding="utf-8")
+        commit = os.getenv("KROOG_COMMIT", "")
+        if re.fullmatch(r"[0-9a-f]{40}", commit):
+            html = re.sub(r'(/assets/[^"<>?]+\.(?:css|js))(?:\?v=[^"<>]*)?',
+                          lambda match: match[1] + "?v=" + commit, html)
+        return web.Response(text=html, content_type="text/html", headers={
             "Cache-Control": "no-store, no-cache, must-revalidate",
             "Pragma": "no-cache",
             "Expires": "0",
         })
     async def release(request):
-        return web.json_response({"release": RELEASE}, headers={
+        status = {"enabled": False}
+        status_path = os.getenv("KROOG_DEPLOY_STATUS")
+        if status_path:
+            try:
+                saved = json.loads(Path(status_path).read_text(encoding="utf-8"))
+                status = {key: saved[key] for key in (
+                    "enabled", "interval_seconds", "phase", "current_sha",
+                    "candidate_sha", "last_checked", "error") if key in saved}
+            except (OSError, ValueError, TypeError):
+                status = {"enabled": True, "phase": "status_unavailable"}
+        return web.json_response({"release": RELEASE,
+                                  "commit": status.get("current_sha", os.getenv("KROOG_COMMIT")),
+                                  "autodeploy": status}, headers={
             "Cache-Control": "no-store, no-cache, must-revalidate",
         })
     app.router.add_get("/", home)

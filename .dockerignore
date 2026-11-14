@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+config_local.py
+venv
+.venv
+**/__pycache__
+**/*.pyc
+*.db
+*.sqlite3
+data
+.kroog-autodeploy
+miniapp/assets/previews

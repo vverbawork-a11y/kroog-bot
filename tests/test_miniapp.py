@@ -2,6 +2,8 @@
 import hashlib
 import hmac
 import json
+import os
+from unittest.mock import patch
 import tempfile
 import time
 import unittest
@@ -76,6 +78,26 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(release.status, 200)
         self.assertEqual((await release.json())["release"], shop.RELEASE)
         self.assertIn("no-store", release.headers.get("Cache-Control", ""))
+
+    async def test_deployment_status_is_public_but_secrets_are_not(self):
+        path = Path(self.tmp.name) / "deploy-status.json"
+        path.write_text(json.dumps({"enabled": True, "phase": "running",
+                                    "current_sha": "a" * 40,
+                                    "private_path": "/private/volume", "token": "TEST_SECRET"}))
+        with patch.dict(os.environ, {"KROOG_DEPLOY_STATUS": str(path)}):
+            response = await self.client.get("/api/release")
+            data = await response.json()
+        self.assertEqual(data["commit"], "a" * 40)
+        self.assertTrue(data["autodeploy"]["enabled"])
+        self.assertNotIn("token", data["autodeploy"])
+        self.assertNotIn("private_path", data["autodeploy"])
+
+    async def test_deployed_commit_invalidates_all_script_and_css_urls(self):
+        with patch.dict(os.environ, {"KROOG_COMMIT": "b" * 40}):
+            response = await self.client.get("/")
+            html = await response.text()
+        for asset in ("brand.css", "shop.css", "ambient.js", "shop.js"):
+            self.assertIn("/assets/" + asset + "?v=" + "b" * 40, html)
 
     async def test_artwork_order_is_saved_and_private(self):
         response = await self.submit(self.params())
