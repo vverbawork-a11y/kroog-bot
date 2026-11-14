@@ -57,6 +57,8 @@ main figure{margin:0 0 var(--kroog-space-6);border-radius:var(--kroog-radius);ov
 
 /* A small native disclosure keeps the catalogue focused on the records. */
 .stock-intro .help{margin-bottom:var(--kroog-space-2)}
+.stock-intro .package-details{margin-bottom:var(--kroog-space-2)}
+.stock-intro .print-note{margin-bottom:var(--kroog-space-6)}
 .package-details{font-size:14px;line-height:1.45;margin:0 0 var(--kroog-space-6)}
 .package-details summary{cursor:pointer;font-weight:500;width:fit-content;padding-block:var(--kroog-space-1)}
 .package-details summary:focus-visible{outline:3px solid var(--kroog-orange);outline-offset:2px;border-radius:var(--kroog-radius)}

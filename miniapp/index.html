@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<meta name="kroog-release" content="2026-11-14-18">
-<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=18">
+<meta name="kroog-release" content="2026-11-14-19">
+<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=19">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script defer src="/assets/ambient.js?v=15"></script>
 <script defer src="/assets/shop.js?v=16"></script>
@@ -17,27 +17,30 @@
 <header><img src="/assets/kroog-logo.svg" width="88" alt="Круг"><nav><button id="shopNav">Заказ</button><button id="aboutNav">О нас</button><button id="worksNav">Работы</button><button id="stockNav" hidden>Склад</button></nav></header>
 <main>
 <section id="shop">
-<div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><div id="stockHint" class="stock-intro"><p class="help">В цене — пластинка с базовой комплектацией. Цветная печать — отдельно.</p>
+<div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><div id="stockHint" class="stock-intro"><p class="help">Цена указана за пластинку с базовой комплектацией.</p>
 <details class="package-details">
-<summary>Что входит в цену</summary>
+<summary>Базовая комплектация</summary>
 <ul>
-<li>Белый или чёрный конверт</li>
-<li>Внутренний бумажный антистатический конверт</li>
+<li>Пластинка выбранного цвета</li>
+<li>Белый или чёрный внешний конверт</li>
+<li>Внутренний антистатический бумажный конверт</li>
 <li>Внешний прозрачный защитный конверт</li>
-<li>Белое яблоко — центральная этикетка пластинки</li>
+<li>Белая центральная этикетка пластинки</li>
 </ul>
 </details>
+<p class="help print-note">Цветную печать конверта и этикетки можно добавить при оформлении.</p>
 </div><div id="colors" class="grid"></div>
 <form id="form" hidden>
 <h2 id="selectedName"></h2>
 <button type="button" id="changeColor" class="text-back">← Другой цвет</button>
 <details class="package-details">
-<summary>Что входит в цену</summary>
+<summary>Базовая комплектация</summary>
 <ul>
-<li>Белый или чёрный конверт</li>
-<li>Внутренний бумажный антистатический конверт</li>
+<li>Пластинка выбранного цвета</li>
+<li>Белый или чёрный внешний конверт</li>
+<li>Внутренний антистатический бумажный конверт</li>
 <li>Внешний прозрачный защитный конверт</li>
-<li>Белое яблоко — центральная этикетка пластинки</li>
+<li>Белая центральная этикетка пластинки</li>
 </ul>
 </details>
 <div class="line"><label for="qty">Количество</label><div class="counter"><button type="button" id="minus" aria-label="Меньше">−</button><input id="qty" type="number" min="1" step="1" value="1" required><button type="button" id="plus" aria-label="Больше">+</button></div></div>
@@ -51,7 +54,7 @@
 </fieldset>
 <div class="options-label">Дополнительно</div>
 <label class="line"><span>Цветная печать конверта<small id="sleevePrice"></small></span><input type="checkbox" id="sleeve"></label>
-<label class="line"><span>Цветное яблоко<small class="option-note">Яблоко — центральная этикетка пластинки.</small><small id="labelPrice"></small></span><input type="checkbox" id="label"></label>
+<label class="line"><span>Цветное яблоко<small class="option-note">Яблоком называют центральную этикетку пластинки.</small><small id="labelPrice"></small></span><input type="checkbox" id="label"></label>
 <label class="line"><span>Заказ вне очереди<small id="rushPrice"></small></span><input type="checkbox" id="rush"></label>
 <label class="contact">Контакт для связи<input id="contact" required minlength="2" maxlength="120" placeholder="@username или телефон" autocomplete="off"></label>
 <div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div>
