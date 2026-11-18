@@ -74,6 +74,20 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn(("Розовый марбл", 6000, 18), colours.COLOURS)
         self.assertNotIn(("Лиловый марбл", 6000, 18), colours.COLOURS)
 
+    def test_faq_tab_and_editorial_copy(self):
+        self.assertIn('id="faqNav"', HTML)
+        self.assertIn('id="faq"', HTML)
+        self.assertIn('id="faqManagerLink"', HTML)
+        self.assertEqual(HTML.count('class="faq-item"'), 5)
+        self.assertIn("Lathe Cut (прямой рез)", HTML)
+        self.assertIn("Благодаря качественным материалам", HTML)
+        self.assertNotIn("современные заготовки из специального износостойкого", HTML)
+        self.assertNotIn("Для наилучшего результата рекомендуем", HTML)
+        self.assertIn("Есть вопрос? Напишите менеджеру.", HTML)
+        self.assertIn('["faqNav","faq"]', JS)
+        self.assertIn('managerLink.href = catalog.manager_url', JS)
+        self.assertIn('.faq-contact-button', CSS)
+
     def test_clean_navigation_and_no_unwanted_art(self):
         self.assertLess(HTML.index('id="aboutNav"'), HTML.index('id="worksNav"'))
         self.assertNotIn("Твоя пластинка", HTML)

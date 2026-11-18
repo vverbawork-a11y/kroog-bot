@@ -2,14 +2,14 @@
 const $ = id => document.getElementById(id);
 const tg = window.Telegram?.WebApp;
 const money = n => n.toLocaleString("ru-RU") + " ₽";
-const panels = ["shop","inventory","about","receipt","inquiry","works"];
+const panels = ["shop","inventory","about","receipt","inquiry","works","faq"];
 let catalog, color, requestId, busy = false, choosing = true;
 let interestColor = null, interestRequestId = null;
 let activePromo = null, promoEpoch = 0;
 function display(panel) {
   document.body.dataset.panel=panel;
   for (const name of panels) $(name).hidden = name !== panel;
-  for (const [id,name] of [["shopNav","shop"],["aboutNav","about"],["worksNav","works"],["stockNav","inventory"]]) {
+  for (const [id,name] of [["shopNav","shop"],["aboutNav","about"],["worksNav","works"],["faqNav","faq"],["stockNav","inventory"]]) {
     $(id).setAttribute("aria-current",String(name === panel));
   }
   $("status").textContent = "";
@@ -71,6 +71,9 @@ async function load() {
   catalog = await api("catalog");
   $("stockNav").hidden = !catalog.admin;
   $("promoManager").hidden = !catalog.admin;
+  const managerLink = $("faqManagerLink");
+  managerLink.hidden = !catalog.manager_url;
+  if (catalog.manager_url) managerLink.href = catalog.manager_url;
   if (catalog.channel) { $("channel").href = catalog.channel; $("channel").hidden = false; }
   if (!$("contact").value) $("contact").value = catalog.contact;
   $("sleevePrice").textContent = "+"+money(catalog.sleeve)+" за экземпляр";
@@ -364,6 +367,14 @@ async function openShop(){choosing=true;display("shop");try{await load();}catch(
 $("changeColor").onclick=openShop;$("shopNav").onclick=openShop;$("back").onclick=openShop;
 $("aboutNav").onclick=()=>display("about");
 $("worksNav").onclick=()=>display("works");
+$("faqNav").onclick=()=>display("faq");
+$("faqManagerLink").onclick=(event)=>{
+  const address=$("faqManagerLink").getAttribute("href");
+  if (address?.startsWith("https://t.me/") && tg?.openTelegramLink) {
+    event.preventDefault();
+    tg.openTelegramLink(address);
+  }
+};
 $("stockNav").onclick=async()=>{display("inventory");try{await load();await loadPromos();}catch(e){$("status").textContent=e.message;}};
 async function start(){
   tg?.ready();tg?.expand();display("shop");startBackground();
