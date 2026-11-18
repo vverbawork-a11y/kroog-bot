@@ -222,3 +222,26 @@ body[data-panel="inquiry"] #ambientBg,body[data-panel="receipt"] #ambientBg{opac
   .stockrow label:first-child{flex-basis:100%}
 }
 @media(prefers-reduced-motion:reduce){body,#ambientBg{transition:none}#ambientBg .ambient-still{animation:none}}
+
+/* FAQ uses the same page gutter and editorial typography as the About section,
+   without nesting the answers in decorative rounded rectangles. */
+body[data-panel="faq"]{background:#f5f1ff}
+body[data-panel="faq"] #ambientBg{opacity:.48;filter:hue-rotate(12deg) saturate(1.07)}
+#faq{padding:0 0 var(--kroog-space-6)}
+#faq h1{margin:0 0 var(--kroog-space-6)}
+.faq-list{margin:0;padding:0}
+.faq-item{border-top:1px solid rgba(74,21,19,.24);padding:var(--kroog-space-6) 0}
+.faq-item h2{margin:0 0 var(--kroog-space-3);font-size:clamp(20px,4.5vw,24px);line-height:1.25;font-weight:500}
+.faq-item p{margin:0 0 var(--kroog-space-4);max-width:600px;font-size:16px;line-height:1.5}
+.faq-item p:last-child{margin-bottom:0}
+.faq-contact{border-top:1px solid rgba(74,21,19,.24);padding-top:var(--kroog-space-8);margin-top:0}
+.faq-contact p{margin:0 0 var(--kroog-space-4);font-size:22px;font-weight:500;line-height:1.2}
+.faq-contact-button{display:inline-flex;align-items:center;justify-content:center;min-width:160px;min-height:48px;
+  padding:var(--kroog-space-3) var(--kroog-space-6);background:var(--kroog-burgundy);color:var(--kroog-cream);
+  font-weight:500;text-decoration:none;border:0;border-radius:var(--kroog-radius)}
+.faq-contact-button:focus-visible{outline:3px solid var(--kroog-orange);outline-offset:3px}
+@media(max-width:480px){
+  nav{gap:var(--kroog-space-1);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{flex:1 0 auto;white-space:nowrap;padding:var(--kroog-space-2) 7px}
+}

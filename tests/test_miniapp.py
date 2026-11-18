@@ -362,6 +362,20 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(data.endswith(b"\xff\xd9"), image.name)
                 self.assertGreater(len(data),30000)
 
+    async def test_manager_link_is_returned_for_faq(self):
+        previous = config.MANAGER_USERNAME
+        try:
+            config.MANAGER_USERNAME = "kroog_manager"
+            response = await self.client.get("/api/catalog", headers=self.headers(43))
+            self.assertEqual(response.status, 200)
+            self.assertEqual((await response.json())["manager_url"], "https://t.me/kroog_manager")
+            config.MANAGER_USERNAME = ""
+            response = await self.client.get("/api/catalog", headers=self.headers(43))
+            self.assertEqual(response.status, 200)
+            self.assertEqual((await response.json())["manager_url"], "tg://user?id=42")
+        finally:
+            config.MANAGER_USERNAME = previous
+
     async def test_clean_ui_and_form_position(self):
         from pathlib import Path
         base=Path(__file__).resolve().parents[1]/"miniapp"

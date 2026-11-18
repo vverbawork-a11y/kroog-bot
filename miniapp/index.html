@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<meta name="kroog-release" content="2026-11-14-21">
-<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=21">
+<meta name="kroog-release" content="2026-11-18-22">
+<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=22">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script defer src="/assets/ambient.js?v=15"></script>
-<script defer src="/assets/shop.js?v=21"></script>
+<script defer src="/assets/shop.js?v=22"></script>
 </head>
 <body>
 <div id="ambientBg" aria-hidden="true">
   <img class="ambient-still" src="/assets/white-violet-bg.png" alt="">
   <video id="ambientVideo" data-src="/assets/white-violet-lines-hq.mp4" muted loop playsinline preload="none" tabindex="-1" disablepictureinpicture></video>
 </div>
-<header><img src="/assets/kroog-logo.svg" width="88" alt="Круг"><nav><button id="shopNav">Заказ</button><button id="aboutNav">О нас</button><button id="worksNav">Работы</button><button id="stockNav" hidden>Склад</button></nav></header>
+<header><img src="/assets/kroog-logo.svg" width="88" alt="Круг"><nav><button id="shopNav">Заказ</button><button id="aboutNav">О нас</button><button id="worksNav">Работы</button><button id="faqNav">FAQ</button><button id="stockNav" hidden>Склад</button></nav></header>
 <main>
 <section id="shop">
 <div class="rule" id="colorHeading"><h2>Цвет винила</h2><span>12″</span></div><div id="stockHint" class="stock-intro"><p class="help">Цена указана за пластинку с базовой комплектацией.</p>
@@ -81,6 +81,40 @@
 <section id="works" hidden>
 <h1>Наши работы</h1>
 <p class="works-text">Скоро здесь появятся фотографии готовых релизов и отзывы их авторов.</p>
+</section>
+<section id="faq" hidden aria-labelledby="faqTitle">
+<h1 id="faqTitle">FAQ</h1>
+<div class="faq-list">
+<article class="faq-item">
+<h2>1. Чем наши пластинки отличаются от обычного винила?</h2>
+<p>Мы используем технологию <strong>Lathe Cut (прямой рез)</strong> — звуковая дорожка нарезается непосредственно на заготовку с помощью алмазного резца.</p>
+<p>В отличие от заводского прессования, где минимальный тираж обычно начинается от 100–200 экземпляров, у нас можно заказать даже одну пластинку. Каждый экземпляр нарезается вручную, в реальном времени, под контролем мастера.</p>
+</article>
+<article class="faq-item">
+<h2>2. Насколько хорошее качество звука?</h2>
+<p>Наши пластинки звучат очень близко к цифровому оригиналу, а в некоторых случаях могут превосходить по качеству отдельные прессованные издания.</p>
+<p>Хотите убедиться самостоятельно? По запросу мы предоставим графики измерений и аудиосравнение цифрового оригинала с записью на пластинке, чтобы вы могли оценить результат ещё до оформления заказа.</p>
+</article>
+<article class="faq-item">
+<h2>3. Как долго прослужит пластинка?</h2>
+<p>Наши пластинки предназначены для многократного прослушивания. Благодаря качественным материалам и при правильном обращении они могут служить долгие годы.</p>
+<p>Рекомендуем хранить пластинки вертикально, в защитных конвертах, избегать прикосновений к звуковым дорожкам и использовать проигрыватель с правильно настроенной иглой.</p>
+</article>
+<article class="faq-item">
+<h2>4. Можно ли заказать цвет, которого сейчас нет в наличии?</h2>
+<p>Да. В нашем каталоге представлены как доступные цвета, так и те, которые временно отсутствуют на складе.</p>
+<p>Если интересующего вас цвета из каталога нет в наличии, нажмите на него и оставьте запрос. Мы уточним, сможем ли заказать его в следующей поставке, и свяжемся с вами.</p>
+</article>
+<article class="faq-item">
+<h2>5. Как оформить заказ и передать музыку?</h2>
+<p>Всё просто! Выберите цвет пластинки, количество, скорость воспроизведения и дополнительные опции. Затем оставьте контакт и отправьте заявку.</p>
+<p>После оформления с вами свяжется менеджер, которому вы сможете передать аудиофайлы и макеты оформления, а также согласовать сроки, стоимость и детали изготовления.</p>
+</article>
+</div>
+<div class="faq-contact">
+<p>Есть вопрос? Напишите менеджеру.</p>
+<a id="faqManagerLink" class="faq-contact-button" href="" target="_blank" rel="noopener noreferrer" hidden>Написать</a>
+</div>
 </section>
 <section id="about" hidden>
 <h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b></p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Вы выбираете цвет пластинки, оформление конверта и яблок, а мы помогаем подготовить материалы к производству.</p><p>Обычно изготовление занимает 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Этикетка («яблоко») · PDF</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>

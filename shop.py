@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import hmac
 import json
+import re
 import logging
 import os
 import re
@@ -25,7 +26,7 @@ import promotions
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-14-21"
+RELEASE = "2026-11-18-22"
 
 
 def setup():
@@ -78,6 +79,14 @@ def photo(name):
     return None
 
 
+def manager_telegram_url():
+    """Use configured manager handle, or link to that same admin by Telegram ID."""
+    handle = (config.MANAGER_USERNAME or "").strip().removeprefix("@")
+    if re.fullmatch(r"[A-Za-z0-9_]{5,32}", handle):
+        return "https://t.me/" + handle
+    return f"tg://user?id={config.ADMIN_ID}" if config.ADMIN_ID > 0 else None
+
+
 async def catalog(request):
     user = identity(request)
     owner = user["id"] == config.ADMIN_ID
@@ -106,6 +115,7 @@ async def catalog(request):
     return web.json_response({
         "admin": owner, "channel": config.CHANNEL_URL,
         "contact": "@"+user["username"] if user.get("username") else "",
+        "manager_url": manager_telegram_url(),
         "colors": products,
         "sleeve": prices.PRICE_ENVELOPE, "label": prices.PRICE_LABEL,
         "rush": prices.URGENT_SURCHARGE_PERCENT,
