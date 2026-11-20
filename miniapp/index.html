@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<meta name="kroog-release" content="2026-11-20-23">
-<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=23">
+<meta name="kroog-release" content="2026-11-20-24">
+<link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=24">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script defer src="/assets/ambient.js?v=15"></script>
-<script defer src="/assets/shop.js?v=23"></script>
+<script defer src="/assets/shop.js?v=24"></script>
 </head>
 <body>
 <div id="ambientBg" aria-hidden="true">
@@ -46,10 +46,10 @@
 <fieldset class="audio-setup" id="audioSetup">
 <legend>Скорость записи</legend>
 <div class="rpm-switch" role="radiogroup" aria-label="Скорость записи">
-<label><input type="radio" name="rpm" value="33" checked><span><strong>33⅓ RPM</strong><small>Больше музыки<br>до 21 мин / сторона</small></span></label>
-<label><input type="radio" name="rpm" value="45"><span><strong>45 RPM</strong><small>Чуть лучше качество<br>до 15 мин / сторона</small></span></label>
+<label><input type="radio" name="rpm" value="33" checked><span><strong>33⅓ RPM</strong><small>До 21 минуты на сторону<br>Подходит для альбомов</small></span></label>
+<label><input type="radio" name="rpm" value="45"><span><strong>45 RPM</strong><small>До 15 минут на сторону<br>Подходит для синглов и EP</small></span></label>
 </div>
-<p class="rpm-time" id="rpmTime">Максимум 21 минута на сторону.</p>
+<p class="rpm-time" id="rpmTime">Обе скорости обеспечивают качественное звучание.<br><button type="button" id="rpmFaqLink" class="rpm-faq-link">Подробнее о различиях — в FAQ</button></p>
 </fieldset>
 <div class="options-label">Дополнительно</div>
 <label class="line"><span>Цветная печать конверта<small id="sleevePrice"></small></span><input type="checkbox" id="sleeve"></label>
@@ -64,6 +64,7 @@
 <p class="help promo-terms">Один промокод на заказ. Со скидкой за тираж применяется большая из двух скидок.</p>
 </details>
 <div id="discount"></div><div class="total"><span>Итого</span><b id="total"></b></div>
+<p class="production-time-note">Изготовление — от 3 рабочих дней (в зависимости от загруженности производства).</p>
 <button class="action" id="submit">Оформить заказ</button>
 <p class="checkout-note">После заказа менеджер свяжется с вами, чтобы получить музыку и макеты, согласовать детали и оплату.</p>
 </form>
@@ -110,6 +111,17 @@
 <p>Всё просто! Выберите цвет пластинки, количество, скорость воспроизведения и дополнительные опции. Затем оставьте контакт и отправьте заявку.</p>
 <p>После оформления с вами свяжется менеджер, которому вы сможете передать аудиофайлы и макеты оформления, а также согласовать сроки, стоимость и детали изготовления.</p>
 </article>
+<article class="faq-item" id="faqProduction">
+<h2>6. Сколько времени занимает изготовление пластинки?</h2>
+<p>Срок изготовления — от 3 рабочих дней, в зависимости от загруженности производства. Точную дату мы уточним при подтверждении заказа.</p>
+<p>Вы также можете выбрать опцию «Заказ вне очереди» (+25%). В этом случае сроки изготовления согласовываются индивидуально.</p>
+</article>
+<article class="faq-item" id="faqSpeed">
+<h2>7. Чем отличаются скорости 33⅓ и 45 RPM?</h2>
+<p>Обе скорости позволяют получить качественное звучание: 33⅓ RPM не означает повышенный треск или плохую запись. Главное различие — в длительности и скорости движения звуковой дорожки относительно иглы.</p>
+<p>На пластинке 12″ при 33⅓ RPM можно разместить до 21 минуты музыки на сторону — это удобно для альбомов. При 45 RPM — до 15 минут на сторону; такой вариант часто выбирают для синглов и EP.</p>
+<p>На 45 RPM дорожка проходит под иглой быстрее. Это может дать некоторое преимущество в передаче высоких частот и сложных фрагментов, особенно ближе к центру пластинки. Насколько разница будет слышна, зависит от самой музыки, подготовки записи и проигрывателя.</p>
+</article>
 </div>
 <div class="faq-contact">
 <p>Есть вопрос? Напишите менеджеру.</p>
@@ -117,7 +129,7 @@
 </div>
 </section>
 <section id="about" hidden>
-<h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b></p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Вы выбираете цвет пластинки, оформление конверта и яблок, а мы помогаем подготовить материалы к производству.</p><p>Обычно изготовление занимает 1–2 недели. Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Этикетка («яблоко») · PDF</a></div><h2>Круг в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>
+<h1>О нас</h1><figure class="about-photo"><img src="/assets/kroog-workshop.jpg" alt="Процесс нарезки виниловой пластинки в мастерской Круг" loading="lazy" referrerpolicy="no-referrer"></figure><div class="about-copy"><p><b>«Круг» — мастерская виниловых пластинок на заказ.</b></p><p>Можно сделать одну пластинку для себя или небольшой тираж для релиза. Вы выбираете цвет пластинки, оформление конверта и яблок, а мы помогаем подготовить материалы к производству.</p><p>Изготовление — от 3 рабочих дней (в зависимости от загруженности производства). Точную дату уточним при подтверждении заказа.</p><h2>Макеты</h2><div class="links"><a href="/templates/envelope/Макет_конверт.pdf" target="_blank">Конверт · PDF</a><a href="/templates/label/Макет_яблоко.pdf" target="_blank">Этикетка («яблоко») · PDF</a></div><h2>Мы в сети</h2><div class="links"><a id="channel" hidden target="_blank" rel="noopener">Telegram</a><a href="https://instagram.com/kroogvinyl" target="_blank" rel="noopener">Instagram</a></div></div></section>
 <section id="inventory" hidden><h1>Склад</h1><p>Укажите фактический остаток. Цвет с нулём останется в каталоге с отметкой «Нет в наличии» и кнопкой запроса.</p>
 <details id="promoManager" class="promo-manager" hidden>
 <summary>Промокоды</summary>
