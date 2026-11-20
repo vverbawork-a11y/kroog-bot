@@ -309,7 +309,7 @@ $("promoAdminForm").onsubmit=async event=>{
 // Minimal checkout: audio, tracklist and print files are collected by the manager.
 $("rpmFaqLink").onclick=()=>{
   display("faq");
-  requestAnimationFrame(()=>$("faqSpeed").scrollIntoView({block:"start",behavior:"instant"}));
+  requestAnimationFrame(()=>$("faqSpeed").scrollIntoView({block:"start",behavior:"auto"}));
 };
 $("form").oninput=event=>{
   requestId=null;promoEpoch++;
