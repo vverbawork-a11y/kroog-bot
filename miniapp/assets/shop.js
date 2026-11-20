@@ -307,19 +307,15 @@ $("promoAdminForm").onsubmit=async event=>{
 };
 
 // Minimal checkout: audio, tracklist and print files are collected by the manager.
-function musicGuide() {
-  const rpm = document.querySelector('input[name="rpm"]:checked')?.value || "33";
-  $("rpmTime").textContent = rpm === "45"
-    ? "Максимум 15 минут на сторону."
-    : "Максимум 21 минута на сторону.";
-}
-for (const radio of document.querySelectorAll('input[name="rpm"]')) radio.addEventListener("change",musicGuide);
-musicGuide();
+$("rpmFaqLink").onclick=()=>{
+  display("faq");
+  requestAnimationFrame(()=>$("faqSpeed").scrollIntoView({block:"start",behavior:"instant"}));
+};
 $("form").oninput=event=>{
   requestId=null;promoEpoch++;
   if(event.target.id==="promoCode") activePromo=null;
   if(!activePromo) $("promoMessage").textContent="";
-  prices();musicGuide();
+  prices();
 };
 $("minus").onclick=()=>{$("qty").stepDown();requestId=null;prices();};
 $("plus").onclick=()=>{$("qty").stepUp();requestId=null;prices();};
@@ -335,7 +331,7 @@ $("form").onsubmit=async e=>{
     const result=await api("orders",payload);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
     $("receiptText").textContent="Заказ оформлен! Менеджер свяжется с вами, чтобы получить музыку и макеты, обсудить детали и оплату.";
-    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();resetPromo();musicGuide();
+    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();resetPromo();
   } catch(error) {
     if(/промокод/i.test(error.message)) {
       activePromo=null;promoEpoch++;$("promoEntry").open=true;
