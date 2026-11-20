@@ -26,7 +26,7 @@ import promotions
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-20-23"
+RELEASE = "2026-11-20-24"
 
 
 def setup():
