@@ -85,6 +85,13 @@ main figure{margin:0 0 var(--kroog-space-6);border-radius:var(--kroog-radius);ov
 .promo-row>div{min-width:0;overflow-wrap:anywhere}
 .promo-row small{display:block;margin-top:var(--kroog-space-1)}
 .promo-row button{font-size:14px;flex-shrink:0}
+.promo-row-actions{display:flex;align-items:center;gap:var(--kroog-space-2);flex-shrink:0}
+.promo-row .promo-delete{display:inline-flex;align-items:center;justify-content:center;
+  width:42px;height:42px;min-width:42px;padding:0;border:1px solid #4a151348;
+  border-radius:var(--kroog-radius);font-size:24px;line-height:1;color:var(--kroog-burgundy)}
+.promo-row .promo-delete:focus-visible{outline:3px solid var(--kroog-orange);outline-offset:2px}
+@media(max-width:480px){.promo-row{align-items:flex-start}.promo-row-actions{gap:var(--kroog-space-1)}
+  .promo-row .promo-delete{width:40px;min-width:40px;height:40px}}
 .visually-hidden{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 @media(max-width:360px){#promoAdminForm{grid-template-columns:1fr}}
 
@@ -236,7 +243,7 @@ body[data-panel="faq"] #ambientBg{opacity:.48;filter:hue-rotate(12deg) saturate(
 .faq-item p:last-child{margin-bottom:0}
 .faq-contact{border-top:1px solid rgba(74,21,19,.24);padding-top:var(--kroog-space-8);margin-top:0}
 .faq-contact p{margin:0 0 var(--kroog-space-4);font-size:22px;font-weight:500;line-height:1.2}
-.faq-contact-button{display:inline-flex;align-items:center;justify-content:center;min-width:160px;min-height:48px;
+.faq-contact-button{display:flex;align-items:center;justify-content:center;width:max-content;min-width:160px;min-height:48px;margin-inline:auto;
   padding:var(--kroog-space-3) var(--kroog-space-6);background:var(--kroog-burgundy);color:var(--kroog-cream);
   font-weight:500;text-decoration:none;border:0;border-radius:var(--kroog-radius)}
 .faq-contact-button:focus-visible{outline:3px solid var(--kroog-orange);outline-offset:3px}

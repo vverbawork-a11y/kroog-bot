@@ -22,7 +22,11 @@ def setup(db):
         percent INTEGER NOT NULL CHECK(percent BETWEEN 1 AND 100),
         max_uses INTEGER, expires_at INTEGER, user_id INTEGER,
         returning_only INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1,
-        created_at INTEGER NOT NULL)""")
+        created_at INTEGER NOT NULL, deleted_at INTEGER)""")
+    # Preserve existing promcodes and their usage history on old SQLite DBs.
+    cols = {row[1] for row in db.execute("PRAGMA table_info(promotions)")}
+    if "deleted_at" not in cols:
+        db.execute("ALTER TABLE promotions ADD COLUMN deleted_at INTEGER")
     db.execute("""CREATE TABLE IF NOT EXISTS promotion_uses (
         id INTEGER PRIMARY KEY, promo_id INTEGER NOT NULL, order_id INTEGER NOT NULL UNIQUE,
         user_id INTEGER NOT NULL, released INTEGER NOT NULL DEFAULT 0)""")
@@ -53,11 +57,30 @@ def create(db, data, now=None):
     return cursor.lastrowid
 
 
+def delete(db, promo_id, now=None):
+    """Remove from the active catalogue; preserve past redemptions and orders.
+
+    The old coupon identifier remains for the historical usage ledger. Move its
+    name to a reserved, invalid format so the original code may be recreated.
+    """
+    row = db.execute(
+        "SELECT id,code FROM promotions WHERE id=? AND deleted_at IS NULL",
+        (promo_id,)
+    ).fetchone()
+    if row is None:
+        return False
+    now = int(time.time()) if now is None else now
+    db.execute(
+        "UPDATE promotions SET active=0, deleted_at=?, code=? WHERE id=?",
+        (now, "~deleted:" + str(promo_id) + ":" + row["code"], promo_id)
+    )
+    return True
+
 def validate(db, value, user_id, now=None):
     code = normalize(value)
     now = int(time.time()) if now is None else now
     row = db.execute("SELECT * FROM promotions WHERE code=?", (code,)).fetchone()
-    if not row or not row["active"]:
+    if not row or not row["active"] or row["deleted_at"] is not None:
         raise PromoError("Промокод не найден или отключён.")
     if row["expires_at"] is not None and row["expires_at"] <= now:
         raise PromoError("Срок действия промокода истёк.")

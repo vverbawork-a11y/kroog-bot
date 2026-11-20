@@ -261,12 +261,32 @@ function renderPromos(promos) {
     if(promo.user_id) conditions.push("Получатель: "+promo.user_id);
     if(promo.returning_only) conditions.push("Для повторного заказа");
     note.textContent=conditions.join(" · ");info.append(title,note);
+    const actions=document.createElement("div");
+    actions.className="promo-row-actions";
     const toggle=button(promo.active ? "Отключить" : "Включить",async()=>{
-      toggle.disabled=true;
-      try {const result=await api("promos/"+promo.id,{active:!promo.active});renderPromos(result.promos);}
-      catch(error){$("promoAdminStatus").textContent=error.message;toggle.disabled=false;}
+      toggle.disabled=true;remove.disabled=true;
+      try {
+        const result=await api("promos/"+promo.id,{active:!promo.active});
+        renderPromos(result.promos);
+        $("promoAdminStatus").textContent="";
+      }
+      catch(error){$("promoAdminStatus").textContent=error.message;toggle.disabled=false;remove.disabled=false;}
     });
-    row.append(info,toggle);$("promoList").append(row);
+    const remove=button("×",async()=>{
+      if(!confirm('Удалить промокод «'+promo.code+'»? Восстановить его будет нельзя.')) return;
+      remove.disabled=true;toggle.disabled=true;
+      try {
+        const result=await api("promos/"+promo.id,{delete:true});
+        renderPromos(result.promos);
+        $("promoAdminStatus").textContent="Промокод «"+promo.code+"» удалён.";
+      }
+      catch(error){$("promoAdminStatus").textContent=error.message;remove.disabled=false;toggle.disabled=false;}
+    });
+    remove.className="promo-delete";
+    remove.setAttribute("aria-label","Удалить промокод "+promo.code);
+    remove.title="Удалить промокод";
+    actions.append(toggle,remove);
+    row.append(info,actions);$("promoList").append(row);
   }
 }
 $("promoAdminForm").onsubmit=async event=>{
