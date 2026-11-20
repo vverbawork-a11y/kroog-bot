@@ -26,7 +26,7 @@ import promotions
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-18-22"
+RELEASE = "2026-11-20-23"
 
 
 def setup():
@@ -177,12 +177,20 @@ async def manage_promos(request):
         if request.method == "POST":
             data = await payload(request)
             if "id" in request.match_info:
-                if type(data.get("active")) is not bool:
-                    raise web.HTTPBadRequest(text="Укажите статус промокода.")
-                result = db.execute("UPDATE promotions SET active=? WHERE id=?",
-                                    (int(data["active"]), request.match_info["id"]))
-                if not result.rowcount:
-                    raise web.HTTPNotFound(text="Промокод не найден.")
+                promo_id = int(request.match_info["id"])
+                if data == {"delete": True}:
+                    # Hide the removed code permanently without deleting usage
+                    # records or altering historical order totals.
+                    if not promotions.delete(db, promo_id):
+                        raise web.HTTPNotFound(text="Промокод не найден.")
+                elif "delete" not in data and type(data.get("active")) is bool and len(data) == 1:
+                    result = db.execute(
+                        "UPDATE promotions SET active=? WHERE id=? AND deleted_at IS NULL",
+                        (int(data["active"]), promo_id))
+                    if not result.rowcount:
+                        raise web.HTTPNotFound(text="Промокод не найден.")
+                else:
+                    raise web.HTTPBadRequest(text="Укажите статус промокода или его удаление.")
             else:
                 try:
                     promotions.create(db, data)
@@ -192,7 +200,7 @@ async def manage_promos(request):
                     raise web.HTTPConflict(text="Промокод с таким названием уже существует.")
         rows = db.execute("""SELECT p.*, (SELECT COUNT(*) FROM promotion_uses u
             WHERE u.promo_id=p.id AND u.released=0) AS used
-            FROM promotions p ORDER BY p.id DESC""").fetchall()
+            FROM promotions p WHERE p.deleted_at IS NULL ORDER BY p.id DESC""").fetchall()
         return web.json_response({"promos": [dict(row) for row in rows]},
                                  headers={"Cache-Control": "private, no-store"})
 

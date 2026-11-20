@@ -65,6 +65,78 @@ class PromotionTests(unittest.IsolatedAsyncioTestCase):
         response=await self.client.get('/api/promos')
         self.assertEqual(response.status,401)
 
+    async def test_only_admin_can_delete_promos(self):
+        promo = await self.create()
+        for user in (43,):
+            response = await self.client.post(
+                f'/api/promos/{promo["id"]}', json={"delete": True},
+                headers=self.headers(user))
+            self.assertEqual(response.status, 403)
+        response = await self.client.post(
+            f'/api/promos/{promo["id"]}', json={"delete": True})
+        self.assertEqual(response.status, 401)
+        visible = await self.client.get('/api/promos',headers=self.headers(42))
+        self.assertEqual(len((await visible.json())['promos']),1)
+
+    async def test_delete_is_distinct_from_toggling_and_frees_name(self):
+        promo = await self.create()
+        pid = promo["id"]
+        # Toggling off remains reversible.
+        off = await self.client.post(
+            f'/api/promos/{pid}',json={"active": False},headers=self.headers(42))
+        self.assertEqual(off.status,200)
+        self.assertFalse((await off.json())["promos"][0]["active"])
+        on = await self.client.post(
+            f'/api/promos/{pid}',json={"active": True},headers=self.headers(42))
+        self.assertEqual(on.status,200)
+        self.assertTrue((await on.json())["promos"][0]["active"])
+        for malformed in ({"delete": False},{"delete": True,"active": True},{}):
+            invalid = await self.client.post(
+                f'/api/promos/{pid}',json=malformed,headers=self.headers(42))
+            self.assertEqual(invalid.status,400)
+        response = await self.client.post(
+            f'/api/promos/{pid}',json={"delete": True},headers=self.headers(42))
+        self.assertEqual(response.status,200)
+        self.assertEqual((await response.json())["promos"],[])
+        self.assertEqual((await self.quote()).status,400)
+        # It is deleted, not merely paused: activation is no longer possible.
+        again = await self.client.post(
+            f'/api/promos/{pid}',json={"active": True},headers=self.headers(42))
+        self.assertEqual(again.status,404)
+        missing = await self.client.post(
+            f'/api/promos/{pid}',json={"delete": True},headers=self.headers(42))
+        self.assertEqual(missing.status,404)
+        fresh = await self.create()
+        self.assertNotEqual(fresh["id"],pid)
+        self.assertEqual(fresh["code"],"FRIENDS_TEST")
+
+    async def test_delete_used_promo_keeps_order_and_usage_history(self):
+        promo = await self.create()
+        created = await self.place()
+        self.assertEqual(created.status,201,await created.text())
+        order_id = (await created.json())['id']
+        self.assertEqual(self.count_uses(),1)
+        response = await self.client.post(
+            f'/api/promos/{promo["id"]}',json={"delete": True},
+            headers=self.headers(42))
+        self.assertEqual(response.status,200)
+        self.assertEqual((await response.json())['promos'],[])
+        with closing(database.get_connection()) as db:
+            row = db.execute(
+                'SELECT * FROM promotion_uses WHERE order_id=?',(order_id,)
+            ).fetchone()
+            self.assertEqual(row['promo_id'],promo['id'])
+            archived = db.execute(
+                'SELECT active, deleted_at, code FROM promotions WHERE id=?',
+                (promo['id'],)).fetchone()
+            self.assertEqual(archived['active'],0)
+            self.assertIsNotNone(archived['deleted_at'])
+            self.assertTrue(archived['code'].startswith('~deleted:'))
+        saved = await self.client.get(
+            f'/api/orders/{order_id}',headers=self.headers(42))
+        self.assertEqual((await saved.json())['promo_code'],'FRIENDS_TEST')
+        self.assertEqual((await saved.json())['total'],4000)
+
     async def test_quote_applies_one_code_without_reserving_anything(self):
         await self.create()
         response=await self.quote(promo_code=' friends_test ')

@@ -87,6 +87,9 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn('["faqNav","faq"]', JS)
         self.assertIn('managerLink.href = catalog.manager_url', JS)
         self.assertIn('.faq-contact-button', CSS)
+        self.assertIn('margin-inline:auto', CSS)
+        self.assertIn('promo-delete', JS)
+        self.assertIn('promo-row-actions', CSS)
 
     def test_clean_navigation_and_no_unwanted_art(self):
         self.assertLess(HTML.index('id="aboutNav"'), HTML.index('id="worksNav"'))
