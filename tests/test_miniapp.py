@@ -64,7 +64,7 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         form.add_field("payload", json.dumps(params, ensure_ascii=False))
         if files:
             for key in ("sleeve_front", "sleeve_back", "label_a", "label_b"):
-                form.add_field(key, b"TEST FILE " + key.encode(),
+                form.add_field(key, b"\xff\xd8\xff" + b"TEST FILE " + key.encode(),
                                filename=key + ".jpg", content_type="image/jpeg")
         return await self.client.post("/api/orders", data=form, headers=self.headers(43))
 
@@ -114,7 +114,7 @@ class MiniAppOrderTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(unauthorized.status, 403)
         permitted = await self.client.get(file_url, headers=self.headers(42))
         self.assertEqual(permitted.status, 200)
-        self.assertEqual(await permitted.read(), b"TEST FILE sleeve_front")
+        self.assertEqual(await permitted.read(), b"\xff\xd8\xffTEST FILE sleeve_front")
 
     async def test_retry_is_idempotent(self):
         params = self.params()

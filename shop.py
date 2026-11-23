@@ -26,7 +26,7 @@ import promotions
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-20-24"
+RELEASE = "2026-11-23-25"
 
 
 def setup():
@@ -44,6 +44,9 @@ def setup():
             UNIQUE(user_id, request_id))""")
 
         promotions.setup(db)
+        db.execute("""CREATE TABLE IF NOT EXISTS api_limits (
+            user_id INTEGER NOT NULL, bucket TEXT NOT NULL, started INTEGER NOT NULL,
+            count INTEGER NOT NULL, PRIMARY KEY(user_id,bucket))""")
 
 
 def identity(request):
@@ -69,6 +72,54 @@ def identity(request):
 def admin(request):
     if identity(request)["id"] != config.ADMIN_ID:
         raise web.HTTPForbidden(text="Только для менеджера.")
+
+
+def limit_requests(user_id, bucket, maximum, seconds=60):
+    # Shared across restarts/workers; identity comes only from verified Telegram data.
+    now = int(time.time())
+    with closing(database.get_connection()) as db, db:
+        db.execute("BEGIN IMMEDIATE")
+        db.execute("DELETE FROM api_limits WHERE started < ?", (now - 86400,))
+        row = db.execute("SELECT started,count FROM api_limits WHERE user_id=? AND bucket=?",
+                         (user_id, bucket)).fetchone()
+        if row and now - row["started"] < seconds:
+            if row["count"] >= maximum:
+                raise web.HTTPTooManyRequests(
+                    text="Слишком много запросов. Попробуйте через минуту.",
+                    headers={"Retry-After": str(max(1, seconds - (now - row["started"])))})
+            db.execute("UPDATE api_limits SET count=count+1 WHERE user_id=? AND bucket=?",
+                       (user_id, bucket))
+        else:
+            db.execute("INSERT OR REPLACE INTO api_limits VALUES(?,?,?,1)",
+                       (user_id, bucket, now))
+
+
+@web.middleware
+async def api_security(request, handler):
+    if request.path.startswith("/api/"):
+        try:
+            if request.path != "/api/release":
+                user = identity(request)
+                if request.method == "POST":
+                    maximum = 10 if request.path in {"/api/orders", "/api/inquiries"} else 60
+                    limit_requests(user["id"], request.path if request.path in {
+                        "/api/orders", "/api/inquiries", "/api/quote"} else "admin", maximum)
+                    if request.content_type == "multipart/form-data":
+                        if request.path != "/api/orders":
+                            raise web.HTTPUnsupportedMediaType()
+                    else:
+                        # Reading here enforces a small JSON/form limit even for chunked bodies.
+                        request = request.clone(client_max_size=artwork.MAX_PAYLOAD)
+                        await request.read()
+            response = await handler(request)
+        except web.HTTPException as error:
+            error.headers["Cache-Control"] = "private, no-store"
+            error.headers["X-Content-Type-Options"] = "nosniff"
+            raise
+        response.headers["Cache-Control"] = "private, no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+    return await handler(request)
 
 
 def photo(name):
@@ -440,7 +491,7 @@ async def notify_orders(bot):
 
 
 def application():
-    app = web.Application(client_max_size=90 * 1024 * 1024)
+    app = web.Application(client_max_size=90 * 1024 * 1024, middlewares=[api_security])
     async def home(request):
         # Telegram WebView and proxy caches must not keep obsolete app HTML.
         html = (APP / "index.html").read_text(encoding="utf-8")

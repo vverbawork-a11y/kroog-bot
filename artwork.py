@@ -16,6 +16,35 @@ import database
 FIELDS = {"sleeve_front", "sleeve_back", "label_a", "label_b"}
 EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf", ".tif", ".tiff", ".psd", ".ai"}
 MAX_FILE = 20 * 1024 * 1024
+MAX_PAYLOAD = 16384
+
+
+def validate_signature(path, suffix):
+    # Reject renamed scripts/executables. This is format screening, not antivirus.
+    with path.open("rb") as source:
+        head = source.read(1024)
+    signatures = {
+        ".jpg": (b"\xff\xd8\xff",), ".jpeg": (b"\xff\xd8\xff",),
+        ".png": (b"\x89PNG\r\n\x1a\n",),
+        ".tif": (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"),
+        ".tiff": (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+"),
+        ".psd": (b"8BPS\x00\x01",), ".pdf": (b"%PDF-",),
+        ".ai": (b"%PDF-", b"%!PS-Adobe-"),
+    }
+    if not head.startswith(signatures.get(suffix, ())):
+        raise web.HTTPBadRequest(text="Содержимое макета не соответствует формату файла.")
+
+
+async def bounded_read(stream, limit=MAX_PAYLOAD):
+    body = bytearray()
+    while True:
+        chunk = await stream.read_chunk(size=8192)
+        if not chunk:
+            return bytes(body)
+        body.extend(chunk)
+        if len(body) > limit:
+            raise web.HTTPRequestEntityTooLarge(max_size=limit, actual_size=len(body))
+
 
 
 def directory():
@@ -66,9 +95,7 @@ async def receive(request):
             if part.name == "payload" and part.filename is None:
                 if data is not None:
                     raise web.HTTPBadRequest(text="Повторяющиеся параметры заказа.")
-                body = await part.read()
-                if len(body) > 8192:
-                    raise web.HTTPBadRequest(text="Слишком длинная заявка.")
+                body = await bounded_read(part)
                 try:
                     data = json.loads(body.decode("utf-8"))
                 except (ValueError, UnicodeDecodeError):
@@ -92,6 +119,7 @@ async def receive(request):
                         output.write(chunk)
                 if not size:
                     raise web.HTTPBadRequest(text="Прикреплён пустой файл.")
+                validate_signature(stage / name, suffix)
                 files[key] = {"name": original, "stored": name, "size": size}
             else:
                 raise web.HTTPBadRequest(text="Неизвестное поле в заявке.")

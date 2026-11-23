@@ -6,6 +6,7 @@
        → аудио → подтверждение → заявка
 """
 
+from html import escape
 import os
 
 from aiogram import F, Router
@@ -426,7 +427,7 @@ async def send_application_to_admin(callback: CallbackQuery, data: dict) -> None
 
     text = (
         "🔔 <b>Новая заявка KROOG</b>\n\n"
-        f"Клиент: {user.full_name} ({username})\n"
+        f"Клиент: {escape(user.full_name)} ({username})\n"
         f"ID клиента: <code>{user.id}</code>\n\n"
         f"Цвет: <b>{data['color_name']}</b>\n"
         f"Тираж: <b>{data['quantity']} шт</b>\n"
