@@ -7,6 +7,7 @@ let catalog, color, requestId, busy = false, choosing = true;
 let interestColor = null, interestRequestId = null;
 let activePromo = null, promoEpoch = 0;
 function display(panel) {
+  $("markPaid").hidden=true;
   document.body.dataset.panel=panel;
   for (const name of panels) $(name).hidden = name !== panel;
   for (const [id,name] of [["shopNav","shop"],["aboutNav","about"],["worksNav","works"],["faqNav","faq"],["stockNav","inventory"]]) {
@@ -169,7 +170,7 @@ $("inquiryForm").onsubmit=async e=>{
     $("receiptText").textContent="Запрос по цвету «"+interestColor.name+
       "» отправлен. Мы свяжемся с вами по указанному контакту.";
     $("receiptFiles").replaceChildren();
-    $("cancelOrder").hidden=true;
+    $("cancelOrder").hidden=true;$("markPaid").hidden=true;
     interestRequestId=null;
   } catch(error) {$("status").textContent=error.message;}
   finally {busy=false;$("inquirySubmit").disabled=false;}
@@ -330,8 +331,8 @@ $("form").onsubmit=async e=>{
       rpm:Number(document.querySelector('input[name="rpm"]:checked')?.value||33)};
     const result=await api("orders",payload);
     display("receipt");$("receiptTitle").textContent="Заказ №"+result.id;
-    $("receiptText").textContent="Заказ оформлен! Менеджер свяжется с вами, чтобы получить музыку и макеты, обсудить детали и оплату.";
-    $("cancelOrder").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();resetPromo();
+    $("receiptText").textContent="Заказ оформлен! Менеджер свяжется с вами, чтобы получить музыку и макеты, обсудить детали и оплату. Неоплаченный заказ автоматически отменяется через 24 часа после оформления.";
+    $("cancelOrder").hidden=true;$("markPaid").hidden=true;$("receiptFiles").replaceChildren();requestId=null;$("form").reset();resetPromo();
   } catch(error) {
     if(/промокод/i.test(error.message)) {
       activePromo=null;promoEpoch++;$("promoEntry").open=true;
@@ -345,8 +346,9 @@ async function detail(id) {
   const o=await api("orders/"+id);
   display("receipt");$("receiptTitle").textContent="Заказ №"+o.id;
   const opts=[o.sleeve&&"цветной конверт",o.label&&"цветное яблоко",o.rush&&"срочно"].filter(Boolean).join(", ");
-  $("receiptText").textContent=[o.cancelled?"Отменён":"Принят",o.color+" × "+o.quantity,opts||"Без доплат",
+  $("receiptText").textContent=[o.cancelled?(o.cancel_reason==="expired"?"Отменён: оплата не подтверждена за 24 часа":"Отменён"):o.paid?"Оплачен":"Ожидает оплаты",o.color+" × "+o.quantity,opts||"Без доплат",
     "Итого "+money(o.total),
+    ...(!o.cancelled && !o.paid && o.expires_at ? ["Оплатить до: "+new Date(o.expires_at*1000).toLocaleString("ru-RU")] : []),
     ...(o.promo_applied ? ["Промокод: "+o.promo_code+" · "+o.promo_percent+"%"] : []),
     "Скорость: "+(o.rpm||33)+" RPM",
     (o.tracklist_a?.length ? "A: "+o.tracklist_a.join("; ") : "A: треклист позже"),
@@ -373,6 +375,13 @@ async function detail(id) {
     });
     $("receiptFiles").append(b);
   }
+  $("markPaid").hidden=o.cancelled||o.paid;
+  $("markPaid").onclick=async()=>{
+    if(!confirm("Вы получили оплату за заказ №"+o.id+"? Автоматическая отмена будет отключена."))return;
+    $("markPaid").disabled=true;
+    try {await api("orders/"+id+"/paid",{});await detail(id);}catch(e){$("status").textContent=e.message;}
+    finally {$("markPaid").disabled=false;}
+  };
   $("cancelOrder").hidden=o.cancelled;
   $("cancelOrder").onclick=async()=>{
     if(!confirm("Отменить заказ и вернуть "+o.quantity+" шт. на склад?"))return;

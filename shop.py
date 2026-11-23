@@ -10,7 +10,7 @@ import re
 import sqlite3
 import time
 import uuid
-from contextlib import closing
+from contextlib import closing, suppress
 from pathlib import Path
 from urllib.parse import parse_qsl, quote, urlsplit
 
@@ -26,7 +26,7 @@ import promotions
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-23-25"
+RELEASE = "2026-11-23-26"
 
 
 def setup():
@@ -43,10 +43,53 @@ def setup():
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(user_id, request_id))""")
 
+        columns = {row[1] for row in db.execute("PRAGMA table_info(shop_orders)")}
+        for name, declaration in (("paid_at", "INTEGER"), ("expires_at", "INTEGER"),
+                                  ("cancel_reason", "TEXT")):
+            if name not in columns:
+                db.execute(f"ALTER TABLE shop_orders ADD COLUMN {name} {declaration}")
+        # Existing orders deliberately retain NULL deadlines: payment history
+        # was not tracked before this release, so auto-cancelling them is unsafe.
+        db.execute("CREATE INDEX IF NOT EXISTS orders_expiry ON shop_orders(expires_at) "
+                   "WHERE cancelled=0 AND paid_at IS NULL")
         promotions.setup(db)
         db.execute("""CREATE TABLE IF NOT EXISTS api_limits (
             user_id INTEGER NOT NULL, bucket TEXT NOT NULL, started INTEGER NOT NULL,
             count INTEGER NOT NULL, PRIMARY KEY(user_id,bucket))""")
+
+
+
+def expire_orders(db, now=None):
+    """Caller owns BEGIN IMMEDIATE; stock/promo release is exactly once."""
+    now = int(time.time()) if now is None else now
+    rows = db.execute("SELECT id,color_id,quantity FROM shop_orders "
+                      "WHERE cancelled=0 AND paid_at IS NULL AND expires_at <= ?", (now,)).fetchall()
+    for row in rows:
+        db.execute("UPDATE colors SET stock=stock+? WHERE id=?", (row["quantity"], row["color_id"]))
+        db.execute("UPDATE shop_orders SET cancelled=1,cancel_reason='expired' WHERE id=?", (row["id"],))
+        db.execute("UPDATE promotion_uses SET released=1 WHERE order_id=?", (row["id"],))
+    return len(rows)
+
+
+def sweep_expired_orders():
+    with closing(database.get_connection()) as db, db:
+        db.execute("BEGIN IMMEDIATE")
+        return expire_orders(db)
+
+
+async def reservation_worker(app):
+    async def run():
+        while True:
+            try:
+                sweep_expired_orders()
+            except Exception:
+                logging.exception("Could not expire reservations; retrying")
+            await asyncio.sleep(30)
+    task = asyncio.create_task(run())
+    yield
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
 
 
 def identity(request):
@@ -141,6 +184,7 @@ def manager_telegram_url():
 async def catalog(request):
     user = identity(request)
     owner = user["id"] == config.ADMIN_ID
+    sweep_expired_orders()
     rows = database.get_all_colors()
     products = []
     for row in rows:
@@ -217,6 +261,7 @@ def order_totals(db, data, user_id):
 async def quote_order(request):
     user = identity(request)
     data = await payload(request)
+    sweep_expired_orders()
     with closing(database.get_connection()) as db:
         _, totals, _ = order_totals(db, data, user["id"])
     return web.json_response(totals, headers={"Cache-Control": "no-store"})
@@ -305,6 +350,7 @@ async def place(request):
         with closing(database.get_connection()) as db:
             try:
                 db.execute("BEGIN IMMEDIATE")
+                expire_orders(db)
                 old = db.execute(
                     "SELECT id FROM shop_orders WHERE user_id=? AND request_id=?",
                     (user["id"], request_id)
@@ -322,8 +368,9 @@ async def place(request):
                 )
                 db.execute("UPDATE colors SET stock=stock-? WHERE id=?", (qty, color_id))
                 order = db.execute(
-                    "INSERT INTO shop_orders(user_id,request_id,color_id,quantity,details) VALUES(?,?,?,?,?)",
-                    (user["id"], request_id, color_id, qty, json.dumps(details, ensure_ascii=False))
+                    "INSERT INTO shop_orders(user_id,request_id,color_id,quantity,details,expires_at) VALUES(?,?,?,?,?,?)",
+                    (user["id"], request_id, color_id, qty, json.dumps(details, ensure_ascii=False),
+                     int(time.time()) + 24 * 3600)
                 )
                 if promo and totals.get("promo_applied"):
                     db.execute("INSERT INTO promotion_uses(promo_id,order_id,user_id) VALUES(?,?,?)",
@@ -381,6 +428,7 @@ async def inquiry(request):
 async def stock(request):
     """Manager can set physical stock and toggle in-transit separately."""
     admin(request)
+    sweep_expired_orders()
     data = await payload(request)
     color_id = number(data, "color", 1)
     stock_qty = number(data, "stock", 0)
@@ -405,16 +453,36 @@ async def manager_order(request):
     admin(request)
     with closing(database.get_connection()) as db, db:
         db.execute("BEGIN IMMEDIATE")
+        expire_orders(db)
         row = db.execute("SELECT * FROM shop_orders WHERE id=?", (request.match_info["id"],)).fetchone()
         if not row:
             raise web.HTTPNotFound(text="Заказ не найден.")
         cancelled = bool(row["cancelled"])
         if request.method == "POST" and not cancelled:
             db.execute("UPDATE colors SET stock=stock+? WHERE id=?", (row["quantity"],row["color_id"]))
-            db.execute("UPDATE shop_orders SET cancelled=1 WHERE id=?", (row["id"],))
+            db.execute("UPDATE shop_orders SET cancelled=1,cancel_reason='manager' WHERE id=?", (row["id"],))
             db.execute("UPDATE promotion_uses SET released=1 WHERE order_id=?", (row["id"],))
             cancelled = True
-        return web.json_response(dict(json.loads(row["details"]), id=row["id"], cancelled=cancelled))
+        return web.json_response(dict(json.loads(row["details"]), id=row["id"], cancelled=cancelled,
+                                      paid=bool(row["paid_at"]), paid_at=row["paid_at"],
+                                      expires_at=row["expires_at"], cancel_reason=row["cancel_reason"]))
+
+
+async def mark_paid(request):
+    admin(request)
+    with closing(database.get_connection()) as db, db:
+        db.execute("BEGIN IMMEDIATE")
+        expire_orders(db)
+        row = db.execute("SELECT * FROM shop_orders WHERE id=?", (request.match_info["id"],)).fetchone()
+        if not row:
+            raise web.HTTPNotFound(text="Заказ не найден.")
+        if row["cancelled"]:
+            # Commit expiry before rejecting, so released stock is not rolled back.
+            db.commit()
+            raise web.HTTPConflict(text="Заказ уже отменён. Оформите новый заказ перед оплатой.")
+        if row["paid_at"] is None:
+            db.execute("UPDATE shop_orders SET paid_at=? WHERE id=?", (int(time.time()), row["id"]))
+    return web.json_response({"ok": True})
 
 
 async def download_artwork(request):
@@ -438,7 +506,7 @@ async def notify_orders(bot):
     from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
     while True:
         with closing(database.get_connection()) as db:
-            orders = db.execute("SELECT id,details FROM shop_orders WHERE notified=0 AND cancelled=0 ORDER BY id LIMIT 20").fetchall()
+            orders = db.execute("SELECT id,details,expires_at FROM shop_orders WHERE notified=0 AND cancelled=0 ORDER BY id LIMIT 20").fetchall()
         for order in orders:
             o = json.loads(order["details"])
             ref = order["id"]
@@ -455,6 +523,8 @@ async def notify_orders(bot):
                     message += "\n" + side.upper() + ": " + "; ".join(tracks)[:600]
             if o.get("audio_link"):
                 message += "\nАудио: " + o["audio_link"][:800]
+            if order["expires_at"]:
+                message += "\nРезерв на 24 часа. После получения оплаты отметьте её в карточке заказа."
             link = WebAppInfo(url=f"{config.MINIAPP_URL}/?order={ref}")
             try:
                 await bot.send_message(config.ADMIN_ID, message, parse_mode=None,
@@ -492,6 +562,7 @@ async def notify_orders(bot):
 
 def application():
     app = web.Application(client_max_size=90 * 1024 * 1024, middlewares=[api_security])
+    app.cleanup_ctx.append(reservation_worker)
     async def home(request):
         # Telegram WebView and proxy caches must not keep obsolete app HTML.
         html = (APP / "index.html").read_text(encoding="utf-8")
@@ -532,6 +603,7 @@ def application():
     app.router.add_post("/api/stock", stock)
     app.router.add_get(r"/api/orders/{id:\d+}", manager_order)
     app.router.add_post(r"/api/orders/{id:\d+}/cancel", manager_order)
+    app.router.add_post(r"/api/orders/{id:\d+}/paid", mark_paid)
     app.router.add_get(r"/api/orders/{id:\d+}/artwork/{field}", download_artwork)
     app.router.add_static("/assets", APP / "assets")
     app.router.add_static("/photos", PHOTOS)

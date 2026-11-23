@@ -86,7 +86,7 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn('id="faqNav"', HTML)
         self.assertIn('id="faq"', HTML)
         self.assertIn('id="faqManagerLink"', HTML)
-        self.assertEqual(HTML.count('class="faq-item"'), 7)
+        self.assertEqual(HTML.count('class="faq-item"'), 8)
         self.assertIn('id="faqProduction"', HTML)
         self.assertIn('id="faqSpeed"', HTML)
         self.assertIn('Заказ вне очереди» (+25%)', HTML)

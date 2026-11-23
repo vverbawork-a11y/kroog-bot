@@ -58,7 +58,9 @@ class SecurityTests(unittest.IsolatedAsyncioTestCase):
         details=await response.json()
         self.assertGreater(details['total'],1)
         self.assertEqual(details['user_id'],43)
-        for field in ['admin','paid','payment_status']:self.assertNotIn(field,details)
+        self.assertFalse(details['paid'])
+        self.assertIsNone(details['paid_at'])
+        for field in ['admin','payment_status']:self.assertNotIn(field,details)
 
     async def test_negative_zero_bool_and_fractional_quantities_rejected(self):
         for value in [-1,0,True,1.5,'-1']:

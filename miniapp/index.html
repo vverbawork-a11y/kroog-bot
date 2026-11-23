@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Круг — заказать пластинку</title>
-<meta name="kroog-release" content="2026-11-23-25">
+<meta name="kroog-release" content="2026-11-23-26">
 <link rel="stylesheet" href="/assets/brand.css?v=18"><link rel="stylesheet" href="/assets/shop.css?v=24">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script defer src="/assets/ambient.js?v=15"></script>
@@ -67,6 +67,7 @@
 <p class="production-time-note">Изготовление — от 3 рабочих дней (в зависимости от загруженности производства).</p>
 <button class="action" id="submit">Оформить заказ</button>
 <p class="checkout-note">После заказа менеджер свяжется с вами, чтобы получить музыку и макеты, согласовать детали и оплату.</p>
+<p class="checkout-note">Неоплаченный заказ автоматически отменяется через 24 часа после оформления. Пластинки возвращаются в свободную продажу.</p>
 </form>
 </section>
 <section id="inquiry" hidden>
@@ -122,6 +123,10 @@
 <p>На пластинке 12″ при 33⅓ RPM можно разместить до 21 минуты музыки на сторону — это удобно для альбомов. При 45 RPM — до 15 минут на сторону; такой вариант часто выбирают для синглов и EP.</p>
 <p>На 45 RPM дорожка проходит под иглой быстрее. Это может дать некоторое преимущество в передаче высоких частот и сложных фрагментов, особенно ближе к центру пластинки. Насколько разница будет слышна, зависит от самой музыки, подготовки записи и проигрывателя.</p>
 </article>
+<article class="faq-item">
+<h2>8. Как долго действует резерв заказа?</h2>
+<p>Неоплаченный заказ автоматически отменяется через 24 часа после оформления. Пластинки возвращаются в свободную продажу. Оплата согласовывается с менеджером; после её подтверждения резерв сохраняется за вами.</p>
+</article>
 </div>
 <div class="faq-contact">
 <p>Есть вопрос? Напишите менеджеру.</p>
@@ -147,6 +152,6 @@
 <div id="promoList"></div>
 </details>
 <div id="stocks"></div></section>
-<section id="receipt" hidden><h1 id="receiptTitle"></h1><p id="receiptText"></p><div id="receiptFiles"></div><button id="back" class="action">Вернуться к цветам</button><button id="cancelOrder" hidden>Отменить и вернуть на склад</button></section>
+<section id="receipt" hidden><h1 id="receiptTitle"></h1><p id="receiptText"></p><div id="receiptFiles"></div><button id="back" class="action">Вернуться к цветам</button><button id="markPaid" class="action" hidden>Отметить оплату</button><button id="cancelOrder" hidden>Отменить и вернуть на склад</button></section>
 <p role="status" aria-live="polite" id="status">Загружаем цвета…</p>
 </main></body></html>
