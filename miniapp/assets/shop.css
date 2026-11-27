@@ -123,6 +123,7 @@ main figure{margin:0 0 var(--kroog-space-6);border-radius:var(--kroog-radius);ov
 .caption strong,.caption small{display:block}
 .caption strong{font-weight:500}
 .caption small{opacity:.9;line-height:1.4;margin-top:var(--kroog-space-1)}
+.caption-price{display:block}
 .stock-empty,.no-photo{display:grid;place-items:center;width:100%;height:100%;aspect-ratio:1;background:#f4e6e0;font-size:50px;border-radius:var(--kroog-radius)}
 .tile-unavailable,.tile-incoming{background:var(--kroog-cream);border-color:#4a151326}
 .tile-unavailable .tile-media::after,.tile-incoming .tile-media::after{

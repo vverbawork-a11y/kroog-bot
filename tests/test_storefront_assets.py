@@ -82,6 +82,21 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn(("Розовый марбл", 6000, 18), colours.COLOURS)
         self.assertNotIn(("Лиловый марбл", 6000, 18), colours.COLOURS)
 
+    def test_catalog_price_has_its_own_line(self):
+        self.assertIn('priceLine.className="caption-price"', JS)
+        self.assertIn('priceLine.textContent="от "+money(c.price)', JS)
+        self.assertIn('info.append(priceLine)', JS)
+        self.assertIn('.caption-price{display:block}', CSS)
+        self.assertNotIn('шт. · от ', JS)
+
+    def test_speed_faq_starts_with_duration(self):
+        answer = HTML.split('id="faqSpeed">', 1)[1].split('</article>', 1)[0]
+        self.assertIn('На пластинке 12″', answer.split('<p>', 1)[1])
+        self.assertIn('линейной скорости', answer)
+        self.assertIn('при домашнем прослушивании', answer)
+        self.assertNotIn('плохую запись', answer)
+        self.assertNotIn('треск', answer)
+
     def test_faq_tab_and_editorial_copy(self):
         self.assertIn('id="faqNav"', HTML)
         self.assertIn('id="faq"', HTML)
