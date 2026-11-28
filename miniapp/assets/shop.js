@@ -127,9 +127,13 @@ async function load() {
     const title=document.createElement("strong");
     const info=document.createElement("small");
     caption.className="caption";title.textContent=c.name;
+    const priceLine=document.createElement("span");
+    priceLine.className="caption-price";
+    priceLine.textContent="от "+money(c.price);
     info.textContent=isAvailable
-      ? "Доступно: "+c.stock+" шт. · от "+money(c.price)
-      : "От "+money(c.price)+" · "+(c.incoming ? "Скоро в наличии" : "Нет в наличии");
+      ? "Доступно: "+c.stock+" шт."
+      : (c.incoming ? "Скоро в наличии" : "Нет в наличии");
+    info.append(priceLine);
     caption.append(title,info);tile.append(media,caption);
     return tile;
   }
