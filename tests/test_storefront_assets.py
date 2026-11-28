@@ -82,6 +82,13 @@ class KROOGStorefrontTests(unittest.TestCase):
         self.assertIn(("Розовый марбл", 6000, 18), colours.COLOURS)
         self.assertNotIn(("Лиловый марбл", 6000, 18), colours.COLOURS)
 
+    def test_preorder_and_custom_print_labels(self):
+        self.assertNotIn('"Нет в наличии"', JS)
+        self.assertEqual(JS.count('c.incoming ? "Скоро в наличии" : "Под заказ"'), 3)
+        self.assertIn("Цветная печать конверта с вашим дизайном", HTML)
+        self.assertIn("Цветная печать яблока с вашим дизайном", HTML)
+        self.assertIn("Яблоком называют центральную этикетку пластинки.", HTML)
+
     def test_catalog_price_has_its_own_line(self):
         self.assertIn('priceLine.className="caption-price"', JS)
         self.assertIn('priceLine.textContent="от "+money(c.price)', JS)
