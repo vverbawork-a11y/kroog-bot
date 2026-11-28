@@ -26,7 +26,7 @@ import promotions
 ROOT = Path(__file__).resolve().parent
 APP = ROOT / "miniapp"
 PHOTOS = ROOT / "photos"
-RELEASE = "2026-11-27-27"
+RELEASE = "2026-11-28-28"
 
 
 def setup():
@@ -510,7 +510,7 @@ async def notify_orders(bot):
         for order in orders:
             o = json.loads(order["details"])
             ref = order["id"]
-            options = ", ".join(title for k,title in (("sleeve","конверт"),("label","яблоко"),("rush","вне очереди")) if o[k]) or "без доплат"
+            options = ", ".join(title for k,title in (("sleeve","конверт с дизайном заказчика"),("label","яблоко с дизайном заказчика"),("rush","вне очереди")) if o[k]) or "без доплат"
             message = (f"Заказ №{ref}\n{o['color']} × {o['quantity']}\n{options}\n"
                        f"Итого {o['total']} ₽\n{o['name']} · {o['contact']}")
             message += f"\nМакеты прикреплены: {len(o.get('files', {}))}" if o["sleeve"] or o["label"] else ""
@@ -545,7 +545,7 @@ async def notify_orders(bot):
                 await bot.send_message(
                     config.ADMIN_ID,
                     f"Запрос цвета №{inquiry_row['id']}\n"
-                    f"Хочу: {inquiry_row['name']} ({'в пути' if inquiry_row['incoming'] else 'нет в наличии'})\n"
+                    f"Хочу: {inquiry_row['name']} ({'в пути' if inquiry_row['incoming'] else 'под заказ'})\n"
                     f"Telegram ID: {inquiry_row['user_id']}\n"
                     f"Контакт: {inquiry_row['contact']}",
                     parse_mode=None

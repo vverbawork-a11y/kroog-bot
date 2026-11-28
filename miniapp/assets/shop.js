@@ -120,7 +120,7 @@ async function load() {
     if (!isAvailable) {
       const flag=document.createElement("span");
       flag.className="stock-overlay";
-      flag.textContent=c.incoming ? "Скоро в наличии" : "Нет в наличии";
+      flag.textContent=c.incoming ? "Скоро в наличии" : "Под заказ";
       media.append(flag);
     }
     const caption=document.createElement("span");
@@ -132,7 +132,7 @@ async function load() {
     priceLine.textContent="от "+money(c.price);
     info.textContent=isAvailable
       ? "Доступно: "+c.stock+" шт."
-      : (c.incoming ? "Скоро в наличии" : "Нет в наличии");
+      : (c.incoming ? "Скоро в наличии" : "Под заказ");
     info.append(priceLine);
     caption.append(title,info);tile.append(media,caption);
     return tile;
@@ -156,7 +156,7 @@ async function load() {
 function showInquiry(c) {
   interestColor=c;
   interestRequestId=null;
-  $("inquiryColor").textContent=c.name+" · "+(c.incoming ? "Скоро в наличии" : "Нет в наличии") +" · от "+money(c.price)+" за пластинку";
+  $("inquiryColor").textContent=c.name+" · "+(c.incoming ? "Скоро в наличии" : "Под заказ") +" · от "+money(c.price)+" за пластинку";
   if (!$("inquiryContact").value) $("inquiryContact").value=catalog?.contact || "";
   display("inquiry");
 }
@@ -349,7 +349,7 @@ $("form").onsubmit=async e=>{
 async function detail(id) {
   const o=await api("orders/"+id);
   display("receipt");$("receiptTitle").textContent="Заказ №"+o.id;
-  const opts=[o.sleeve&&"цветной конверт",o.label&&"цветное яблоко",o.rush&&"срочно"].filter(Boolean).join(", ");
+  const opts=[o.sleeve&&"печать конверта с вашим дизайном",o.label&&"печать яблока с вашим дизайном",o.rush&&"срочно"].filter(Boolean).join(", ");
   $("receiptText").textContent=[o.cancelled?(o.cancel_reason==="expired"?"Отменён: оплата не подтверждена за 24 часа":"Отменён"):o.paid?"Оплачен":"Ожидает оплаты",o.color+" × "+o.quantity,opts||"Без доплат",
     "Итого "+money(o.total),
     ...(!o.cancelled && !o.paid && o.expires_at ? ["Оплатить до: "+new Date(o.expires_at*1000).toLocaleString("ru-RU")] : []),
